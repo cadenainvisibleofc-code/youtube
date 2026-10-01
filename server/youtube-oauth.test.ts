@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { decodeYouTubeOAuthState, decryptToken, encodeYouTubeOAuthState, encryptToken, hasYouTubePublicationScope, isYouTubeOAuthConfigured, youtubeOAuthConfigStatus } from "./youtube-oauth";
+import { decodeYouTubeOAuthState, decryptToken, encodeYouTubeOAuthState, encryptToken, hasYouTubePublicationScope, isYouTubeOAuthConfigured, selectOAuthChannels, youtubeOAuthConfigStatus } from "./youtube-oauth";
 import { decodeOAuthState, encodeOAuthState } from "@shared/const";
 
 const original = {
@@ -22,6 +22,20 @@ afterEach(() => {
 });
 
 describe("YouTube OAuth configuration", () => {
+  it("returns all distinct channels when adding channels from one Google account", () => {
+    const channels = [{ id: "channel-a", snippet: { title: "A" } }, { id: "channel-b", snippet: { title: "B" } }, { id: "channel-a", snippet: { title: "A duplicado" } }];
+    expect(selectOAuthChannels(channels, undefined, true).map(channel => channel.id)).toEqual(["channel-a", "channel-b"]);
+  });
+
+  it("keeps reconnection scoped to the requested channel", () => {
+    const channels = [{ id: "channel-a" }, { id: "channel-b" }];
+    expect(selectOAuthChannels(channels, "channel-b", true).map(channel => channel.id)).toEqual(["channel-b"]);
+  });
+
+  it("does not silently choose one channel when multi-channel import is not requested", () => {
+    expect(() => selectOAuthChannels([{ id: "channel-a" }, { id: "channel-b" }])).toThrow(/múltiplos canais/);
+  });
+
   it("round-trips the selected project channel without breaking legacy state", () => {
     const encoded = encodeOAuthState({ redirectUri: "https://example.com/api/youtube/oauth/callback", nonce: "nonce", ownerOpenId: "owner", projectChannelId: 42 });
     expect(decodeOAuthState(encoded)).toMatchObject({ projectChannelId: 42, ownerOpenId: "owner" });

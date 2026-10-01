@@ -14,13 +14,15 @@ Um projeto possui membros e até cinco perfis em `projectChannels`. Cada conexã
 
 ## OAuth
 
-### Adicionar uma conta/canal
+### Adicionar canal ou canais da mesma conta Google
 
 ```text
 /api/youtube/oauth/start?addAccount=1&projectId=<PROJECT_ID>
 ```
 
-O servidor autentica a sessão, valida o projeto e o papel do membro, conta os slots não revogados e bloqueia a sexta tentativa. O state assinado contém o projeto, o modo de criação, o nonce, a identidade iniciadora, o redirect URI e a expiração.
+O botão é apresentado como **Adicionar canais**. O servidor autentica a sessão, valida o projeto e o papel do membro, consulta todos os canais acessíveis pela conta Google, conta os slots não revogados e bloqueia a operação se todos os canais novos não couberem. Assim, um único login Google pode trazer dois ou três canais para slots separados. O state assinado contém o projeto, o modo de criação, o nonce, a identidade iniciadora, o redirect URI e a expiração.
+
+Se o runtime encontrar uma conexão legada sem projeto, o painel mostra **Organizar canal conectado**. Essa ação cria o projeto inicial, cria o slot do canal já conectado e apenas vincula a conexão existente; não troca nem recriptografa os tokens.
 
 ### Reconectar um slot existente
 
@@ -32,7 +34,7 @@ O servidor valida o slot e a permissão. O callback só aceita o canal retornado
 
 ### Callback
 
-O callback valida assinatura, expiração, nonce em cookie, identidade da sessão, redirect URI, projeto, papel e canal retornado. Tokens de acesso e refresh são cifrados com AES-256-GCM antes de persistir; valores de token não devem aparecer em logs ou respostas.
+O callback valida assinatura, expiração, nonce em cookie, identidade da sessão, redirect URI, projeto e papel. Para reconectar um slot específico, exige o canal selecionado. Para **Adicionar canais**, importa todos os canais retornados pelo YouTube, sem duplicar os que já existem e sem reativar os que estão pausados ou revogados. Tokens de acesso e refresh são cifrados com AES-256-GCM antes de persistir; valores de token não devem aparecer em logs ou respostas.
 
 A custódia de uma conexão vinculada a `projectChannelId` é compartilhada pelo slot do projeto, permitindo que owner/editor autorizados usem o mesmo token cifrado. Conexões legadas sem slot continuam resolvidas apenas por `ownerOpenId` e não devem ser usadas quando houver múltiplas conexões.
 

@@ -3,7 +3,7 @@ import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
-import { getDashboardSnapshot, getProjectChannelStatuses, getResonanceMetrics, getWritableProjectsForOwner, ingestManualVideo, recordReadingVisit, regenerateHumanizedDrafts, updateDraftReview, MAX_PROJECT_CHANNELS } from "./db";
+import { createProjectForOwner, getDashboardSnapshot, getProjectChannelStatuses, getResonanceMetrics, getWritableProjectsForOwner, ingestManualVideo, organizeLegacyYouTubeConnection, recordReadingVisit, regenerateHumanizedDrafts, updateDraftReview, MAX_PROJECT_CHANNELS } from "./db";
 import { generateDraft } from "./editorial";
 import { extractYouTubeVideoId } from "./ingestion";
 import { generateEditorialDraft } from "./llm-editorial";
@@ -76,6 +76,8 @@ export const appRouter = router({
       const [channels, projects] = await Promise.all([getProjectChannelStatuses(ctx.user.openId), getWritableProjectsForOwner(ctx.user.openId)]);
       return { youtube: { ...youtubeIntegrationStatus(), oauth: youtubeOAuthConfigStatus(), connection, channels, projects, maxProjectChannels: MAX_PROJECT_CHANNELS }, llm: { configured: Boolean(process.env.BUILT_IN_FORGE_API_KEY), enabled: process.env.AI_EDITORIAL_ENABLED === "1", provider: process.env.AI_EDITORIAL_PROVIDER === "external" ? "relaymodels" : "manus" } };
     }),
+    createProject: protectedProcedure.input(z.object({ name: z.string().max(180).optional() }).optional()).mutation(({ ctx, input }) => createProjectForOwner(ctx.user.openId, input?.name)),
+    organizeLegacyConnection: protectedProcedure.input(z.object({ name: z.string().max(180).optional() }).optional()).mutation(({ ctx, input }) => organizeLegacyYouTubeConnection(ctx.user.openId, input?.name)),
     automationSettings: protectedProcedure.input(z.object({ projectChannelId: z.number().int().positive().optional() }).optional()).query(({ ctx, input }) => getAutomationSettingsForChannel(ctx.user.openId, input?.projectChannelId)),
     updateAutomationSettings: protectedProcedure
       .input(z.object({

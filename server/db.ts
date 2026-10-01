@@ -1,5 +1,6 @@
 import { and, desc, eq, isNull, ne, or, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
+import { randomUUID } from "node:crypto";
 import { InsertUser, chainEvents, drafts, editorialFeedback, projectChannels, projectMembers, projects, publicationEngagementEvents, publicationOutbox, publications, readingVisits, users, videos, videoMetricSnapshots, youtubeConnections } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 import { canApproveDraft, generateDraft, isMeaningfulPersonalComment, validateFinalDraft } from "./editorial";
@@ -282,6 +283,34 @@ export async function getWritableProjectsForOwner(ownerOpenId: string) {
     .innerJoin(projectMembers, eq(projectMembers.projectId, projects.id))
     .where(and(eq(projectMembers.openId, ownerOpenId), eq(projectMembers.status, "active"), or(eq(projectMembers.role, "owner"), eq(projectMembers.role, "editor")), eq(projects.status, "active")))
     .limit(MAX_PROJECT_CHANNELS + 1);
+}
+
+export async function createProjectForOwner(ownerOpenId: string, name = "Cadena Invisible") {
+  const database = requireDatabase(await getDb());
+  const cleanName = name.trim().slice(0, 180) || "Cadena Invisible";
+  return database.transaction(async transaction => {
+    const project = (await transaction.insert(projects).values({ slug: `cadena-${randomUUID().slice(0, 8)}`, name: cleanName, status: "active" }).returning({ id: projects.id, name: projects.name }))[0];
+    if (!project) throw new Error("Projeto não pôde ser criado");
+    await transaction.insert(projectMembers).values({ projectId: project.id, openId: ownerOpenId, role: "owner", status: "active" });
+    return project;
+  });
+}
+
+export async function organizeLegacyYouTubeConnection(ownerOpenId: string, name = "Cadena Invisible") {
+  const database = requireDatabase(await getDb());
+  return database.transaction(async transaction => {
+    const legacy = await transaction.select().from(youtubeConnections).where(and(eq(youtubeConnections.ownerOpenId, ownerOpenId), isNull(youtubeConnections.projectChannelId))).limit(2);
+    if (legacy.length > 1) throw new Error("Há múltiplas conexões legadas; a organização precisa ser feita manualmente");
+    if (!legacy[0]) return null;
+    const cleanName = name.trim().slice(0, 180) || "Cadena Invisible";
+    const project = (await transaction.insert(projects).values({ slug: `cadena-${randomUUID().slice(0, 8)}`, name: cleanName, status: "active" }).returning({ id: projects.id, name: projects.name }))[0];
+    if (!project) throw new Error("Projeto não pôde ser criado");
+    await transaction.insert(projectMembers).values({ projectId: project.id, openId: ownerOpenId, role: "owner", status: "active" });
+    const channel = (await transaction.insert(projectChannels).values({ projectId: project.id, channelId: legacy[0].channelId, channelName: legacy[0].channelName, status: legacy[0].status === "connected" ? "connected" : "reauthorization_required" }).returning({ id: projectChannels.id, projectId: projectChannels.projectId, channelId: projectChannels.channelId, channelName: projectChannels.channelName, status: projectChannels.status, minInteractionIntervalDays: projectChannels.minInteractionIntervalDays }))[0];
+    if (!channel) throw new Error("Canal não pôde ser organizado");
+    await transaction.update(youtubeConnections).set({ projectChannelId: channel.id, updatedAt: new Date() }).where(eq(youtubeConnections.id, legacy[0].id));
+    return { project, channel };
+  });
 }
 
 async function resolveWritableProjectForOwner(ownerOpenId: string, projectId?: number) {

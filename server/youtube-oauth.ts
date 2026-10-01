@@ -103,6 +103,24 @@ type YouTubeOAuthState = {
   issuedAt: number;
 };
 
+export type YouTubeOAuthChannel = { id: string; snippet?: { title?: string } };
+
+export function selectOAuthChannels(channels: readonly YouTubeOAuthChannel[], targetChannelId?: string, addAll = false) {
+  const unique = channels.filter((channel, index, all) => Boolean(channel.id) && all.findIndex(candidate => candidate.id === channel.id) === index);
+  if (targetChannelId) {
+    const selected = unique.find(channel => channel.id === targetChannelId);
+    if (!selected) throw new Error("O canal selecionado não está disponível nesta conta Google");
+    return [selected];
+  }
+  if (addAll) {
+    if (unique.length === 0) throw new Error("A conta autorizada não possui canais YouTube acessíveis");
+    return unique;
+  }
+  if (unique.length > 1) throw new Error("A conta Google possui múltiplos canais; use Adicionar canais desta conta");
+  if (unique.length === 0) throw new Error("A conta autorizada não possui um canal YouTube acessível");
+  return [unique[0]];
+}
+
 export function encodeYouTubeOAuthState(state: Omit<YouTubeOAuthState, "issuedAt">) {
   const payload = Buffer.from(JSON.stringify({ ...state, issuedAt: Date.now() }), "utf8").toString("base64url");
   const signature = crypto.createHmac("sha256", encryptionKey()).update(payload).digest("base64url");
@@ -330,43 +348,47 @@ export function registerYouTubeOAuthRoutes(app: Express) {
 
       if (!hasYouTubePublicationScope(token.scope)) throw new Error("O token do YouTube não concedeu o escopo de publicação necessário");
 
-      const channels = await fetchJson<{ items?: Array<{ id: string; snippet?: { title?: string } }> }>(`${YOUTUBE_CHANNELS_ENDPOINT}?part=snippet&mine=true&fields=items(id,snippet(title))`, {
+      const channels = await fetchJson<{ items?: YouTubeOAuthChannel[] }>(`${YOUTUBE_CHANNELS_ENDPOINT}?part=snippet&mine=true&fields=items(id,snippet(title))`, {
         headers: { authorization: `Bearer ${token.access_token}` },
       });
-      if (!target && (channels.items?.length ?? 0) > 1) throw new Error("A conta Google possui múltiplos canais; selecione um canal do projeto antes de autorizar");
       const targetChannelId = target?.channelId;
-      const channel = targetChannelId ? channels.items?.find(item => item.id === targetChannelId) : channels.items?.[0];
-      if (!channel?.id) throw new Error("A conta autorizada não possui um canal YouTube acessível");
+      const selectedChannels = selectOAuthChannels(channels.items ?? [], targetChannelId, decoded.createProjectChannel === true);
+      if (decoded.createProjectChannel && decoded.projectId === undefined) throw new Error("Projeto não informado para a nova conta");
       if (decoded.createProjectChannel) {
-        if (decoded.projectId === undefined) throw new Error("Projeto não informado para a nova conta");
-        target = await db.getProjectChannelByYouTubeChannelForOwner(user.openId, decoded.projectId, channel.id);
+        const projectChannels = (await db.getProjectChannelsForOwner(user.openId)).filter(item => item.projectId === decoded.projectId);
+        const existingIds = new Set(projectChannels.filter(item => item.status !== "revoked").map(item => item.channelId));
+        const newChannels = selectedChannels.filter(channel => !existingIds.has(channel.id));
+        const activeCount = projectChannels.filter(item => item.status !== "revoked").length;
+        if (activeCount + newChannels.length > db.MAX_PROJECT_CHANNELS) throw new Error(`A conta possui ${newChannels.length} canais novos, mas o projeto só tem ${Math.max(0, db.MAX_PROJECT_CHANNELS - activeCount)} slot(s) disponível(is)`);
       }
 
       const previous = target ? await db.getYouTubeConnection(user.openId, target.id) : undefined;
       const refreshTokenEncrypted = token.refresh_token ? encryptToken(token.refresh_token) : previous?.refreshTokenEncrypted;
       if (!refreshTokenEncrypted) throw new Error("O Google não retornou refresh token; tente novamente com consentimento");
-      if (decoded.createProjectChannel && !target) {
-        if (decoded.projectId === undefined) throw new Error("Projeto não informado para a nova conta");
-        target = await db.createProjectChannelForOwner({ ownerOpenId: user.openId, projectId: decoded.projectId, channelId: channel.id, channelName: channel.snippet?.title || "Canal YouTube" });
+      for (const channel of selectedChannels) {
+        let channelTarget = targetChannelId === channel.id ? target : undefined;
+        if (decoded.createProjectChannel) {
+          channelTarget = await db.getProjectChannelByYouTubeChannelForOwner(user.openId, decoded.projectId!, channel.id);
+          if (!channelTarget) channelTarget = await db.createProjectChannelForOwner({ ownerOpenId: user.openId, projectId: decoded.projectId, channelId: channel.id, channelName: channel.snippet?.title || "Canal YouTube" });
+        }
+        await db.upsertYouTubeConnection({
+          ownerOpenId: user.openId,
+          projectChannelId: channelTarget?.id,
+          channelId: channel.id,
+          channelName: channel.snippet?.title || "Canal YouTube",
+          accessTokenEncrypted: encryptToken(token.access_token),
+          refreshTokenEncrypted,
+          tokenExpiresAt: new Date(Date.now() + (token.expires_in ?? 3600) * 1000),
+          scopes: token.scope ?? YOUTUBE_SCOPE,
+          status: "connected",
+          lastError: null,
+        });
       }
-
-      await db.upsertYouTubeConnection({
-        ownerOpenId: user.openId,
-        projectChannelId: target?.id,
-        channelId: channel.id,
-        channelName: channel.snippet?.title || "Canal YouTube",
-        accessTokenEncrypted: encryptToken(token.access_token),
-        refreshTokenEncrypted,
-        tokenExpiresAt: new Date(Date.now() + (token.expires_in ?? 3600) * 1000),
-        scopes: token.scope ?? YOUTUBE_SCOPE,
-        status: "connected",
-        lastError: null,
-      });
 
       redirectToApp(res, "connected");
     } catch (error) {
       console.error("[YouTube OAuth] Callback failed", error);
-      redirectToApp(res, "error");
+      redirectToApp(res, "error", error instanceof Error ? error.message : "Não foi possível concluir a conexão do YouTube");
     }
   });
 }
