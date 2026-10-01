@@ -105,8 +105,16 @@ export default function Home() {
   const youtubeOAuthStartBase = youtubeOAuthUsesProduction
     ? `${youtubeProductionOrigin}/api/youtube/oauth/start`
     : "/api/youtube/oauth/start";
-  const youtubeOAuthStartUrl = selectedChannelId ? `${youtubeOAuthStartBase}?projectChannelId=${selectedChannelId}` : youtubeOAuthStartBase;
-  const youtubeConnectLabel = integrations.data?.youtube.connection.reauthorizationRequired ? "Reconectar canal" : youtubeOAuthUsesProduction ? "Conectar no publicado" : "Conectar canal";
+  const selectedChannel = integrations.data?.youtube.channels?.find(channel => channel.id === selectedChannelId);
+  const manageableChannel = integrations.data?.youtube.channels?.find(channel => channel.canManage && !["paused", "revoked"].includes(channel.status));
+  const shouldReconnectSelected = Boolean(selectedChannel?.reauthorizationRequired || integrations.data?.youtube.connection.reauthorizationRequired);
+  const addChannelProjectId = selectedChannel?.projectId ?? manageableChannel?.projectId ?? integrations.data?.youtube.projects?.[0]?.id;
+  const youtubeOAuthStartUrl = shouldReconnectSelected && selectedChannelId
+    ? `${youtubeOAuthStartBase}?projectChannelId=${selectedChannelId}`
+    : addChannelProjectId
+      ? `${youtubeOAuthStartBase}?addAccount=1&projectId=${addChannelProjectId}`
+      : youtubeOAuthStartBase;
+  const youtubeConnectLabel = shouldReconnectSelected ? "Reconectar canal" : youtubeOAuthUsesProduction ? "Adicionar canais no publicado" : "Adicionar canais";
 
   return (
     <div className="min-h-screen bg-[#f7f8f5] text-[#24312d]">

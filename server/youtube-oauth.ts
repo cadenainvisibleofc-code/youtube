@@ -109,7 +109,7 @@ export function selectOAuthChannels(channels: readonly YouTubeOAuthChannel[], ta
   const unique = channels.filter((channel, index, all) => Boolean(channel.id) && all.findIndex(candidate => candidate.id === channel.id) === index);
   if (targetChannelId) {
     const selected = unique.find(channel => channel.id === targetChannelId);
-    if (!selected) throw new Error("O canal selecionado não está disponível nesta conta Google");
+    if (!selected) throw new Error("O canal selecionado não está disponível nesta conta Google. Para adicionar outro canal, volte ao painel e use ‘Adicionar canais’.");
     return [selected];
   }
   if (addAll) {
