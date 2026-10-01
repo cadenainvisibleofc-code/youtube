@@ -175,6 +175,8 @@ export const commentObservations = pgTable("commentObservations", {
   authorPublicId: varchar("authorPublicId", { length: 255 }),
   text: text("text").notNull(),
   likeCount: integer("likeCount").default(0).notNull(),
+  replyCount: integer("replyCount").default(0).notNull(),
+  resonanceScore: integer("resonanceScore").default(0).notNull(),
   publishedAt: timestamp("publishedAt", { withTimezone: true }),
   classification: commentObservationsClassificationEnum("classification").default("noise").notNull(),
   riskLevel: commentObservationsRiskLevelEnum("riskLevel").default("low").notNull(),

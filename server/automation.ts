@@ -6,7 +6,7 @@ import { classifyConversationComment, classifyRisk, isLikelyChannelOwnerComment,
 import { generateEditorialDraft } from "./llm-editorial";
 import { getEditorialContext } from "./editorial-memory";
 import { detectContentLanguage, evaluateEligibility } from "./ingestion";
-import { rankSourceComments } from "./resonance";
+import { rankSourceComments, scoreSourceComment } from "./resonance";
 import { getVideoDetails, listTopComments, searchRecentVideos, YouTubeApiError, type YouTubeCandidate } from "./youtube";
 import { automationDedupeKey } from "./automation-channel-policy";
 
@@ -476,18 +476,21 @@ async function runAutomationUnlocked(input: RunAutomationInput): Promise<Automat
     const database = await requireDatabase();
     for (const comment of comments) {
       const classification = classifyConversationComment(comment.text);
+      const resonance = scoreSourceComment(comment);
       await database.insert(commentObservations).values({
         videoId,
         youtubeCommentId: comment.commentId,
         authorPublicId: null,
         text: comment.text,
         likeCount: comment.likeCount,
+        replyCount: comment.replyCount,
+        resonanceScore: resonance.score,
         publishedAt: comment.publishedAt,
         classification: classification.classification,
         riskLevel: classification.riskLevel,
         exposureSignals: JSON.stringify(classification.exposureSignals),
         source: "youtube_api",
-      }).onConflictDoUpdate({ target: commentObservations.youtubeCommentId, set: { text: comment.text, likeCount: comment.likeCount, classification: classification.classification, riskLevel: classification.riskLevel, exposureSignals: JSON.stringify(classification.exposureSignals) } });
+      }).onConflictDoUpdate({ target: commentObservations.youtubeCommentId, set: { text: comment.text, likeCount: comment.likeCount, replyCount: comment.replyCount, resonanceScore: resonance.score, classification: classification.classification, riskLevel: classification.riskLevel, exposureSignals: JSON.stringify(classification.exposureSignals) } });
     }
     const parentCommentId = isReplyMode && draft.type === "B_reply" ? selectedComment?.commentId ?? null : null;
     const dedupeKey = automationDedupeKey({ ownerId: input.ownerId, projectChannelId: input.projectChannelId, videoId: candidate.videoId, parentCommentId, day: now.toISOString().slice(0, 10) });
