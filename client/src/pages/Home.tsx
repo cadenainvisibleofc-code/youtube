@@ -39,6 +39,7 @@ export default function Home() {
   const snapshot = trpc.dashboard.snapshot.useQuery(undefined, { staleTime: 30_000 });
   const integrations = trpc.dashboard.integrationStatus.useQuery(undefined, { staleTime: 60_000 });
   const selectedChannelId = useSelectedChannelId();
+  const selectedNumericChannelId = typeof selectedChannelId === "number" ? selectedChannelId : undefined;
   const review = trpc.dashboard.reviewDraft.useMutation({
     onSuccess: result => {
       setSelectedId(null);
@@ -107,12 +108,12 @@ export default function Home() {
   const youtubeOAuthStartBase = youtubeOAuthUsesProduction
     ? `${youtubeProductionOrigin}/api/youtube/oauth/start`
     : "/api/youtube/oauth/start";
-  const selectedChannel = integrations.data?.youtube.channels?.find(channel => channel.id === selectedChannelId);
+  const selectedChannel = integrations.data?.youtube.channels?.find(channel => channel.id === selectedNumericChannelId);
   const manageableChannel = integrations.data?.youtube.channels?.find(channel => channel.canManage && !["paused", "revoked"].includes(channel.status));
   const shouldReconnectSelected = Boolean(selectedChannel?.reauthorizationRequired || integrations.data?.youtube.connection.reauthorizationRequired);
   const addChannelProjectId = selectedChannel?.projectId ?? manageableChannel?.projectId ?? integrations.data?.youtube.projects?.[0]?.id;
-  const youtubeOAuthStartUrl = shouldReconnectSelected && selectedChannelId
-    ? `${youtubeOAuthStartBase}?projectChannelId=${selectedChannelId}`
+  const youtubeOAuthStartUrl = shouldReconnectSelected && selectedNumericChannelId
+    ? `${youtubeOAuthStartBase}?projectChannelId=${selectedNumericChannelId}`
     : addChannelProjectId
       ? `${youtubeOAuthStartBase}?addAccount=1&projectId=${addChannelProjectId}`
       : youtubeOAuthStartBase;
@@ -131,7 +132,7 @@ export default function Home() {
           {integrations.data?.youtube.oauth.configured && !integrations.data.youtube.oauth.redirectUriValid && <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">Callback OAuth inválido. Cadastre no Google Cloud: <code>{integrations.data.youtube.oauth.redirectUri ?? "URL ausente"}</code></p>}
         </header>
 
-        {showImport && <Card className="border-teal-100 bg-teal-50/60 shadow-none"><CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center"><div className="min-w-0 flex-1"><p className="text-sm font-semibold text-teal-900">Importar candidato manualmente</p><p className="mt-1 text-xs text-teal-800/75">A descoberta manual só cria uma entrada na fila; a publicação automática é controlada separadamente.</p>{!selectedChannelId && <p className="mt-2 text-xs font-medium text-amber-800">Selecione um canal acima antes de importar para manter a fila isolada.</p>}{importMessage && <p className="mt-2 text-xs font-medium text-teal-900" role="status">{importMessage}</p>}</div><div className="flex w-full gap-2 sm:max-w-xl"><Input value={importUrl} onChange={event => setImportUrl(event.target.value)} placeholder="https://www.youtube.com/watch?v=..." className="bg-white" /><Button disabled={!importUrl || !selectedChannelId || ingest.isPending} onClick={() => ingest.mutate({ url: importUrl, ...(selectedChannelId ? { projectChannelId: selectedChannelId } : {}) })}>{ingest.isPending ? "Conferindo…" : "Salvar"}</Button></div></CardContent></Card>}
+        {showImport && <Card className="border-teal-100 bg-teal-50/60 shadow-none"><CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center"><div className="min-w-0 flex-1"><p className="text-sm font-semibold text-teal-900">Importar candidato manualmente</p><p className="mt-1 text-xs text-teal-800/75">A descoberta manual só cria uma entrada na fila; a publicação automática é controlada separadamente.</p>{!selectedNumericChannelId && <p className="mt-2 text-xs font-medium text-amber-800">Selecione um canal individual antes de importar para manter a fila isolada.</p>}{importMessage && <p className="mt-2 text-xs font-medium text-teal-900" role="status">{importMessage}</p>}</div><div className="flex w-full gap-2 sm:max-w-xl"><Input value={importUrl} onChange={event => setImportUrl(event.target.value)} placeholder="https://www.youtube.com/watch?v=..." className="bg-white" /><Button disabled={!importUrl || !selectedNumericChannelId || ingest.isPending} onClick={() => ingest.mutate({ url: importUrl, projectChannelId: selectedNumericChannelId })}>{ingest.isPending ? "Conferindo…" : "Salvar"}</Button></div></CardContent></Card>}
 
         <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-7">
           <Metric label="Analisados" value={metrics.analyzed} icon={<Flag />} />
@@ -146,7 +147,7 @@ export default function Home() {
         <ChannelPanel />
         <AutomationPanel onChanged={() => snapshot.refetch()} />
 
-        {!isQueue && !isMetrics && !isRules && <DiscoveryPanel projectChannelId={selectedChannelId} onImported={() => snapshot.refetch()} />}
+        {!isQueue && !isMetrics && !isRules && <DiscoveryPanel projectChannelId={selectedNumericChannelId} onImported={() => snapshot.refetch()} />}
 
         {isRules ? <RulesPanel /> : isMetrics ? <MetricsPanel metrics={metrics} /> : (
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_340px]">
