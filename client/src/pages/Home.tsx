@@ -10,6 +10,7 @@ import { AutomationPanel } from "@/components/AutomationPanel";
 import { ChannelPanel } from "@/components/ChannelPanel";
 import { useSelectedChannelId } from "@/components/ChannelPanel";
 import { EditorialLibrary } from "@/components/EditorialLibrary";
+import { GuardianMissionPanel } from "@/components/GuardianMissionPanel";
 import { ArrowUpRight, Check, ExternalLink, Flag, Heart, Link2, MessageCircle, RefreshCw, ShieldAlert, Sparkles, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
@@ -147,6 +148,7 @@ export default function Home() {
 
         <ChannelPanel />
         <AutomationPanel onChanged={() => snapshot.refetch()} />
+        {!isRules && <GuardianMissionPanel />}
 
         {!isQueue && !isMetrics && !isRules && <DiscoveryPanel projectChannelId={selectedNumericChannelId} onImported={() => snapshot.refetch()} />}
 

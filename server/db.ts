@@ -30,7 +30,7 @@ export async function getDb() {
   return _db;
 }
 
-function requireDatabase<T>(db: T | null | undefined): T {
+export function requireDatabase<T>(db: T | null | undefined): T {
   if (!db) throw new DatabaseUnavailableError();
   return db;
 }

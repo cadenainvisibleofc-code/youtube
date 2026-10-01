@@ -17,6 +17,7 @@
 | 6 | `20261001081227` | `integrity_and_outbox_fencing` | `drizzle/pg/0001_integrity_and_outbox_fencing.sql` |
 | 7 | `20261001201800` | `security_function_search_path_hardening` | `drizzle/pg/0002_security_function_search_path_hardening.sql` |
 | 8 | `20261001224419` | `source_comment_resonance` | `drizzle/pg/0003_source_comment_resonance.sql` — replyCount, resonanceScore e índice de ranking |
+| 9 | `20261001232855` | `guardian_missions_and_assignments` | `drizzle/pg/0004_guardian_missions.sql` — missões de 1–5 guardiões, assignments, papéis e RLS |
 
 ## Regras de sincronização
 
@@ -40,9 +41,10 @@
 
 ## Segurança observada
 
-- RLS habilitado nas 23 tabelas públicas.
+- RLS habilitado nas 25 tabelas públicas.
 - Nenhuma política pública; o acesso previsto é exclusivamente server-side.
 - O advisor `rls_enabled_no_policy` permanece como informação esperada deste modelo, não como autorização para abrir acesso público.
 - O hardening de `search_path` das quatro funções de trigger foi aplicado na migration 7.
+- As tabelas `guardianMissions` e `guardianAssignments` foram criadas com RLS habilitado e sem políticas públicas; a verificação confirmou constraints, índices e colunas de distribuição.
 
 Nenhum token, segredo ou texto privado é armazenado neste manifest.

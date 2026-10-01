@@ -36,6 +36,10 @@ export const chatAttachmentsKindEnum = pgEnum("chatAttachments_kind_enum", ["ima
 export const publicationOutboxStatusEnum = pgEnum("publicationOutbox_status_enum", ["pending", "processing", "succeeded", "uncertain", "failed"]);
 export const publicationEngagementEventsEventTypeEnum = pgEnum("publicationEngagementEvents_eventType_enum", ["reply", "mention", "like", "removed", "verified"]);
 export const editorialMemoriesStatusEnum = pgEnum("editorialMemories_status_enum", ["core", "proposed", "approved", "rejected", "archived"]);
+export const guardianMissionsStatusEnum = pgEnum("guardianMissions_status_enum", ["review", "approved", "partially_published", "completed", "archived", "blocked"]);
+export const guardianMissionsLinkPolicyEnum = pgEnum("guardianMissions_linkPolicy_enum", ["none", "exactly_one_when_multiple"]);
+export const guardianAssignmentsRoleEnum = pgEnum("guardianAssignments_role_enum", ["presence", "perspective", "reading"]);
+export const guardianAssignmentsStatusEnum = pgEnum("guardianAssignments_status_enum", ["review", "approved", "discarded", "published", "blocked"]);
 
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
@@ -212,6 +216,48 @@ export const drafts = pgTable("drafts", {
   projectChannelIdx: index("drafts_project_channel_idx").on(table.projectChannelId),
   projectChannelFk: foreignKey({ columns: [table.projectChannelId], foreignColumns: [projectChannels.id], name: "drafts_project_channel_fk" }).onDelete("restrict"),
   ownerFk: foreignKey({ columns: [table.createdBy], foreignColumns: [users.id], name: "drafts_owner_fk" }).onDelete("set null"),
+}));
+
+export const guardianMissions = pgTable("guardianMissions", {
+  id: serial("id").primaryKey(),
+  ownerId: integer("ownerId").notNull(),
+  videoId: integer("videoId").notNull(),
+  sourceCommentId: varchar("sourceCommentId", { length: 128 }),
+  sourceCommentText: text("sourceCommentText"),
+  resonanceScore: integer("resonanceScore").default(0).notNull(),
+  requestedGuardianCount: integer("requestedGuardianCount").notNull(),
+  selectedGuardianCount: integer("selectedGuardianCount").notNull(),
+  linkPolicy: guardianMissionsLinkPolicyEnum("linkPolicy").default("exactly_one_when_multiple").notNull(),
+  status: guardianMissionsStatusEnum("status").default("review").notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
+}, table => ({
+  ownerIdx: index("guardianMissions_owner_idx").on(table.ownerId),
+  videoIdx: index("guardianMissions_video_idx").on(table.videoId),
+  ownerFk: foreignKey({ columns: [table.ownerId], foreignColumns: [users.id], name: "guardianMissions_owner_fk" }).onDelete("restrict"),
+  videoFk: foreignKey({ columns: [table.videoId], foreignColumns: [videos.id], name: "guardianMissions_video_fk" }).onDelete("restrict"),
+}));
+
+export const guardianAssignments = pgTable("guardianAssignments", {
+  id: serial("id").primaryKey(),
+  missionId: integer("missionId").notNull(),
+  projectChannelId: integer("projectChannelId").notNull(),
+  draftId: integer("draftId").notNull(),
+  role: guardianAssignmentsRoleEnum("role").notNull(),
+  sequence: integer("sequence").notNull(),
+  targetCommentId: varchar("targetCommentId", { length: 128 }),
+  containsLink: integer("containsLink").default(0).notNull(),
+  status: guardianAssignmentsStatusEnum("status").default("review").notNull(),
+  createdAt: timestamp("createdAt", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt", { withTimezone: true }).defaultNow().$onUpdate(() => new Date()).notNull(),
+}, table => ({
+  missionSequenceUnique: unique("guardianAssignments_mission_sequence_unique").on(table.missionId, table.sequence),
+  missionChannelUnique: unique("guardianAssignments_mission_channel_unique").on(table.missionId, table.projectChannelId),
+  missionIdx: index("guardianAssignments_mission_idx").on(table.missionId),
+  channelIdx: index("guardianAssignments_channel_idx").on(table.projectChannelId),
+  missionFk: foreignKey({ columns: [table.missionId], foreignColumns: [guardianMissions.id], name: "guardianAssignments_mission_fk" }).onDelete("cascade"),
+  channelFk: foreignKey({ columns: [table.projectChannelId], foreignColumns: [projectChannels.id], name: "guardianAssignments_channel_fk" }).onDelete("restrict"),
+  draftFk: foreignKey({ columns: [table.draftId], foreignColumns: [drafts.id], name: "guardianAssignments_draft_fk" }).onDelete("restrict"),
 }));
 
 export const publications = pgTable("publications", {
