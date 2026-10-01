@@ -45,18 +45,23 @@ export function AutomationPanel({ onChanged }: { onChanged: () => void }) {
       !["paused", "revoked"].includes(channel.status)
   );
   const allChannelIds: number[] = manageableChannels.map(channel => channel.id);
-  const scopedChannelIds: number[] =
-    selectedChannelId === "all"
-      ? allChannelIds
+  const scopedChannelIds: number[] = selectedChannelId === "all"
+    ? allChannelIds
+    : Array.isArray(selectedChannelId)
+      ? selectedChannelId.filter(channelId => allChannelIds.includes(channelId))
       : typeof selectedChannelId === "number"
         ? [selectedChannelId]
         : [];
+  const multiChannelScope =
+    selectedChannelId === "all" || Array.isArray(selectedChannelId);
   const settingsChannelId =
     selectedChannelId === "all"
       ? allChannelIds[0]
-      : typeof selectedChannelId === "number"
-        ? selectedChannelId
-        : undefined;
+      : Array.isArray(selectedChannelId)
+        ? selectedChannelId[0]
+        : typeof selectedChannelId === "number"
+          ? selectedChannelId
+          : undefined;
   const channelInput = settingsChannelId
     ? { projectChannelId: settingsChannelId }
     : undefined;
@@ -179,21 +184,26 @@ export function AutomationPanel({ onChanged }: { onChanged: () => void }) {
     onError: error => toast.error(`Não foi possível pausar: ${error.message}`),
   });
 
-  const selectedScopeLabel =
-    selectedChannelId === "all"
+  const selectedScopeLabel = multiChannelScope
+    ? selectedChannelId === "all"
       ? `Todos os ${allChannelIds.length} canais`
-      : selectedChannelId
-        ? `canal #${selectedChannelId}`
-        : "modo legado";
+      : `${scopedChannelIds.length} canais selecionados`
+    : selectedChannelId
+      ? `canal #${selectedChannelId}`
+      : "modo legado";
   const runOnScope = async <T,>(
     action: (projectChannelId?: number) => Promise<T>
   ) => {
-    if (selectedChannelId === "all") {
+    if (multiChannelScope) {
       if (scopedChannelIds.length === 0)
         throw new Error("Nenhum canal disponível para operação");
       return Promise.all(scopedChannelIds.map(channelId => action(channelId)));
     }
-    return [await action(typeof selectedChannelId === "number" ? selectedChannelId : undefined)];
+    return [
+      await action(
+        typeof selectedChannelId === "number" ? selectedChannelId : undefined
+      ),
+    ];
   };
   const saveScope = async () => {
     await runOnScope(projectChannelId =>
@@ -210,7 +220,7 @@ export function AutomationPanel({ onChanged }: { onChanged: () => void }) {
       })
     );
     toast.success(
-      selectedChannelId === "all"
+      multiChannelScope
         ? `Regras salvas nos ${scopedChannelIds.length} canais.`
         : "Configuração de automação salva."
     );
@@ -270,7 +280,7 @@ export function AutomationPanel({ onChanged }: { onChanged: () => void }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4 p-5 pt-2">
-        {selectedChannelId === "all" ? (
+        {multiChannelScope ? (
           <p className="rounded-xl border border-violet-100 bg-violet-50/60 p-3 text-xs text-violet-900">
             Automação sincronizada em {selectedScopeLabel}: cada canal mantém
             limite, cooldown, fila e outbox próprios.
@@ -377,28 +387,28 @@ export function AutomationPanel({ onChanged }: { onChanged: () => void }) {
             onClick={saveScope}
             disabled={
               save.isPending ||
-              (selectedChannelId === "all" && scopedChannelIds.length === 0)
+              (multiChannelScope && scopedChannelIds.length === 0)
             }
           >
             {save.isPending ? "Salvando…" : "Salvar regras"}
           </Button>
           <Button
             variant="outline"
-          onClick={() =>
-            runScopeAction(
-              projectChannelId =>
-                discoverWeekly.mutateAsync(
-                  selectedChannelId === "all"
-                    ? { projectChannelId: allChannelIds[0] }
-                    : projectChannelId
-                      ? { projectChannelId }
-                      : undefined
-                ),
-              selectedChannelId === "all"
-                ? "Garimpo sincronizado concluído."
-                : "Garimpo semanal concluído."
-            )
-          }
+            onClick={() =>
+              runScopeAction(
+                projectChannelId =>
+                  discoverWeekly.mutateAsync(
+                    multiChannelScope
+                    ? { projectChannelId: settingsChannelId! }
+                      : projectChannelId
+                        ? { projectChannelId }
+                        : undefined
+                  ),
+                multiChannelScope
+                  ? "Garimpo sincronizado concluído."
+                  : "Garimpo semanal concluído."
+              )
+            }
             disabled={discoverWeekly.isPending}
           >
             <Search className="mr-2 h-4 w-4" />
@@ -414,7 +424,7 @@ export function AutomationPanel({ onChanged }: { onChanged: () => void }) {
                     limit: dailyLimit,
                     ...(projectChannelId ? { projectChannelId } : {}),
                   }),
-                selectedChannelId === "all"
+                multiChannelScope
                   ? "Acervo preparado nos canais selecionados."
                   : "Acervo preparado."
               )
@@ -433,7 +443,7 @@ export function AutomationPanel({ onChanged }: { onChanged: () => void }) {
                   prepareDailyBatch.mutateAsync(
                     projectChannelId ? { projectChannelId } : undefined
                   ),
-                selectedChannelId === "all"
+                multiChannelScope
                   ? "Rodada sincronizada preparada em todos os canais."
                   : "Rodada preparada."
               )
@@ -454,7 +464,7 @@ export function AutomationPanel({ onChanged }: { onChanged: () => void }) {
                     limit: 25,
                     ...(projectChannelId ? { projectChannelId } : {}),
                   }),
-                selectedChannelId === "all"
+                multiChannelScope
                   ? "Voz regenerada nos canais selecionados."
                   : "Voz regenerada."
               )
@@ -475,7 +485,7 @@ export function AutomationPanel({ onChanged }: { onChanged: () => void }) {
                     limit: 30,
                     ...(projectChannelId ? { projectChannelId } : {}),
                   }),
-                selectedChannelId === "all"
+                multiChannelScope
                   ? "Publicações aprovadas processadas por canal."
                   : "Publicações aprovadas processadas."
               )
@@ -496,7 +506,7 @@ export function AutomationPanel({ onChanged }: { onChanged: () => void }) {
                     limit: 30,
                     ...(projectChannelId ? { projectChannelId } : {}),
                   }),
-                selectedChannelId === "all"
+                multiChannelScope
                   ? "Verificação oficial concluída por canal."
                   : "Verificação oficial concluída."
               )
@@ -516,7 +526,7 @@ export function AutomationPanel({ onChanged }: { onChanged: () => void }) {
                   run.mutateAsync(
                     projectChannelId ? { projectChannelId } : undefined
                   ),
-                selectedChannelId === "all"
+                multiChannelScope
                   ? "Execução sincronizada concluída; revisão humana permanece obrigatória."
                   : "Execução concluída."
               )
@@ -524,7 +534,7 @@ export function AutomationPanel({ onChanged }: { onChanged: () => void }) {
             disabled={
               run.isPending ||
               !enabled ||
-              (selectedChannelId === "all" && scopedChannelIds.length === 0)
+              (multiChannelScope && scopedChannelIds.length === 0)
             }
           >
             {run.isPending ? (
@@ -545,7 +555,7 @@ export function AutomationPanel({ onChanged }: { onChanged: () => void }) {
                     pause.mutateAsync(
                       projectChannelId ? { projectChannelId } : undefined
                     ),
-                  selectedChannelId === "all"
+                  multiChannelScope
                     ? "Agendamentos pausados em todos os canais."
                     : "Automação pausada."
                 )
@@ -573,14 +583,14 @@ export function AutomationPanel({ onChanged }: { onChanged: () => void }) {
                         projectChannelId:
                           projectChannelId ?? settingsChannelId!,
                       }),
-                    selectedChannelId === "all"
+                    multiChannelScope
                       ? "Agendamento sincronizado nos canais selecionados."
                       : "Agendamento ativado."
                   )
                 }
                 disabled={
                   schedule.isPending ||
-                  (selectedChannelId === "all" && scopedChannelIds.length === 0)
+                  (multiChannelScope && scopedChannelIds.length === 0)
                 }
               >
                 <Clock3 className="mr-2 h-4 w-4" />

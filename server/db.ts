@@ -153,8 +153,9 @@ export async function getDashboardSnapshot(ownerId: number) {
       riskLevel: draft.riskLevel,
       relevanceScore: video?.relevanceScore ?? 0,
       status: draft.status,
-      quote: draft.type === "B_reply" ? draft.quoteComment ?? "Resposta sem comentário-fonte registrado." : draft.quoteVideo ?? "Contexto do vídeo não registrado.",
-      recommendation: draft.type === "C_link" ? "Revisar link antes de aprovar" : "Acolhimento contextual",
+      quote: draft.quoteComment ?? draft.quoteVideo ?? "Contexto do vídeo não registrado.",
+      sourceComment: draft.quoteComment ?? null,
+      recommendation: draft.justification ?? (draft.type === "C_link" ? "Revisar link antes de aprovar" : "Acolhimento contextual"),
     }));
 
     const [publicationRows, engagementRows] = await Promise.all([

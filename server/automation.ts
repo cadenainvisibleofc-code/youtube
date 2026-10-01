@@ -6,6 +6,7 @@ import { classifyConversationComment, classifyRisk, isLikelyChannelOwnerComment,
 import { generateEditorialDraft } from "./llm-editorial";
 import { getEditorialContext } from "./editorial-memory";
 import { detectContentLanguage, evaluateEligibility } from "./ingestion";
+import { rankSourceComments } from "./resonance";
 import { getVideoDetails, listTopComments, searchRecentVideos, YouTubeApiError, type YouTubeCandidate } from "./youtube";
 import { automationDedupeKey } from "./automation-channel-policy";
 
@@ -415,8 +416,9 @@ async function runAutomationUnlocked(input: RunAutomationInput): Promise<Automat
       }
       throw error;
     }
-    const personalComments = comments.filter(comment => isMeaningfulPersonalComment(comment.text));
-    const selectedComment = personalComments.find(comment => classifyRisk(comment.text).riskLevel === "medium") ?? personalComments.find(comment => classifyRisk(comment.text).riskLevel !== "critical");
+    const rankedSourceComments = rankSourceComments(comments);
+    const selectedSource = rankedSourceComments.find(({ resonance }) => resonance.riskLevel !== "critical" && resonance.riskLevel !== "high");
+    const selectedComment = selectedSource?.comment;
     if (await hasRecentContextualInteraction(input.ownerId, candidate.videoId, selectedComment?.commentId, since, input.projectChannelId) || await hasExistingDraft(input.ownerId, candidate.videoId, input.projectChannelId)) {
       result.skipped++;
       result.reasons.push(`já processado ou mesma conversa em cooldown contextual: ${candidate.title}`);
@@ -489,7 +491,8 @@ async function runAutomationUnlocked(input: RunAutomationInput): Promise<Automat
     }
     const parentCommentId = isReplyMode && draft.type === "B_reply" ? selectedComment?.commentId ?? null : null;
     const dedupeKey = automationDedupeKey({ ownerId: input.ownerId, projectChannelId: input.projectChannelId, videoId: candidate.videoId, parentCommentId, day: now.toISOString().slice(0, 10) });
-    const draftId = await createDraft(input.ownerId, input.projectChannelId, videoId, candidate, parentCommentId, isReplyMode ? selectedComment?.text : undefined, draft.text, draft.type, draft.containsLink, draft.riskLevel, `${isReplyMode ? "Resposta a comentário pessoal" : "Comentário no vídeo principal"}. ${draft.justification}`, dedupeKey);
+    const sourceEvidence = selectedSource ? ` Comentário-fonte: ${selectedComment?.likeCount ?? 0} curtidas, ${selectedComment?.replyCount ?? 0} respostas; score de ressonância ${selectedSource.resonance.score}/100 (${selectedSource.resonance.signals.join(", ") || "sinais limitados"}).` : " Sem comentário-fonte pessoal acionável; revisão deve confirmar a âncora no vídeo.";
+    const draftId = await createDraft(input.ownerId, input.projectChannelId, videoId, candidate, parentCommentId, selectedComment?.text, draft.text, draft.type, draft.containsLink, draft.riskLevel, `${isReplyMode ? "Resposta a comentário pessoal" : "Comentário no vídeo principal"}. ${draft.justification}${sourceEvidence}`, dedupeKey);
     if (draftId === null) {
       result.skipped++;
       result.reasons.push(`rascunho duplicado detectado no banco: ${candidate.title}`);

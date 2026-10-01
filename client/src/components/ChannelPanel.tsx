@@ -8,12 +8,19 @@ import { toast } from "sonner";
 
 const STORAGE_KEY = "cadena-invisible:selected-project-channel";
 const CHANNEL_EVENT = "cadena-invisible:channel-selected";
-export type ChannelScope = number | "all" | undefined;
+export type ChannelScope = number | number[] | "all" | undefined;
 
 export function readSelectedChannelId() {
   if (typeof window === "undefined") return undefined;
   const stored = window.localStorage.getItem(STORAGE_KEY);
   if (stored === "all") return "all" as const;
+  if (stored?.includes(",")) {
+    const ids = stored
+      .split(",")
+      .map(Number)
+      .filter(value => Number.isInteger(value) && value > 0);
+    return ids.length ? ids : undefined;
+  }
   const value = Number(stored);
   return Number.isInteger(value) && value > 0 ? value : undefined;
 }
@@ -38,6 +45,8 @@ export function selectChannel(id: ChannelScope) {
   if (typeof window === "undefined") return;
   if (id === undefined) window.localStorage.removeItem(STORAGE_KEY);
   else if (id === "all") window.localStorage.setItem(STORAGE_KEY, "all");
+  else if (Array.isArray(id))
+    window.localStorage.setItem(STORAGE_KEY, id.join(","));
   else window.localStorage.setItem(STORAGE_KEY, String(id));
   window.dispatchEvent(new CustomEvent(CHANNEL_EVENT, { detail: id }));
 }
@@ -66,6 +75,20 @@ export function ChannelPanel() {
   });
   const selectedChannelId = useSelectedChannelId();
   const channels = integrations.data?.youtube.channels ?? [];
+  const selectableChannels = channels.filter(
+    channel =>
+      channel.canManage &&
+      channel.connected &&
+      !["paused", "revoked"].includes(channel.status)
+  );
+  const selectedIds =
+    selectedChannelId === "all"
+      ? selectableChannels.map(channel => channel.id)
+      : Array.isArray(selectedChannelId)
+        ? selectedChannelId
+        : typeof selectedChannelId === "number"
+          ? [selectedChannelId]
+          : [];
   const legacyConnection = integrations.data?.youtube.connection;
   const selected = useMemo(
     () =>
@@ -121,14 +144,22 @@ export function ChannelPanel() {
     onError: error => toast.error(error.message),
   });
   useEffect(() => {
-    if (
-      typeof selectedChannelId === "number" &&
-      integrations.data &&
-      channels.length > 0 &&
-      !selected
-    )
+    if (!integrations.data || channels.length === 0) return;
+    if (Array.isArray(selectedChannelId)) {
+      const valid = selectedChannelId.filter(id =>
+        selectableChannels.some(channel => channel.id === id)
+      );
+      if (valid.length !== selectedChannelId.length)
+        selectChannel(valid.length ? valid : undefined);
+    } else if (typeof selectedChannelId === "number" && !selected)
       selectChannel(undefined);
-  }, [channels, integrations.data, selected, selectedChannelId]);
+  }, [
+    channels,
+    integrations.data,
+    selectableChannels,
+    selected,
+    selectedChannelId,
+  ]);
   const oauthConfigured = Boolean(integrations.data?.youtube.oauth.configured);
   const oauthMissing = integrations.data?.youtube.oauth.missing ?? [];
   const oauthOrigin = integrations.data?.youtube.oauth.productionOrigin;
@@ -266,38 +297,73 @@ export function ChannelPanel() {
           </div>
         ) : (
           <>
-            <label className="block text-sm">
-              <span className="mb-1 block font-medium">Escopo de operação</span>
-              <select
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                value={
-                  selectedChannelId === "all" ? "all" : (selected?.id ?? "")
-                }
-                onChange={event =>
-                  selectChannel(
-                    event.target.value === "all"
-                      ? "all"
-                      : event.target.value
-                        ? Number(event.target.value)
-                        : undefined
-                  )
-                }
-              >
-                <option value="all">Todos os canais — modo sincronizado</option>
-                <option value="">Modo legado / nenhum canal selecionado</option>
-                {channels
-                  .filter(
-                    channel =>
-                      channel.canManage &&
-                      !["paused", "revoked"].includes(channel.status)
-                  )
-                  .map(channel => (
-                    <option key={channel.id} value={channel.id}>
-                      {channel.channelName} · {channel.channelId}
-                    </option>
-                  ))}
-              </select>
-            </label>
+            <div className="rounded-xl border border-[#edf0ed] p-3 text-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <span className="font-medium">Canais da operação</span>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Escolha qualquer combinação: um, dois, três, quatro ou todos
+                    os canais conectados.
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      selectChannel(
+                        selectableChannels.map(channel => channel.id)
+                      )
+                    }
+                    disabled={!selectableChannels.length}
+                  >
+                    Selecionar todos
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => selectChannel(undefined)}
+                    disabled={!selectedIds.length}
+                  >
+                    Limpar
+                  </Button>
+                </div>
+              </div>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {selectableChannels.map(channel => (
+                  <label
+                    key={channel.id}
+                    className="flex cursor-pointer items-center gap-2 rounded-lg border border-[#edf0ed] px-3 py-2"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(channel.id)}
+                      onChange={() => {
+                        const next = selectedIds.includes(channel.id)
+                          ? selectedIds.filter(id => id !== channel.id)
+                          : [...selectedIds, channel.id];
+                        selectChannel(next.length ? next : undefined);
+                      }}
+                      className="accent-teal-700"
+                    />
+                    <span className="min-w-0 truncate">
+                      {channel.channelName}
+                    </span>
+                    <Badge
+                      variant="outline"
+                      className="ml-auto border-teal-200 text-teal-700"
+                    >
+                      Conectado
+                    </Badge>
+                  </label>
+                ))}
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                {selectedIds.length
+                  ? `${selectedIds.length} canal(is) selecionado(s)`
+                  : "Nenhum canal selecionado — modo legado"}
+              </p>
+            </div>
             <div className="grid gap-2 md:grid-cols-2">
               {channels.map(channel => {
                 const channelUnavailable = ["paused", "revoked"].includes(
@@ -306,7 +372,7 @@ export function ChannelPanel() {
                 return (
                   <div
                     key={channel.id}
-                    className={`rounded-xl border p-3 ${channel.id === selected?.id ? "border-teal-300 bg-teal-50/60" : "border-[#edf0ed]"}`}
+                    className={`rounded-xl border p-3 ${selectedIds.includes(channel.id) ? "border-teal-300 bg-teal-50/60" : "border-[#edf0ed]"}`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div>
@@ -342,7 +408,7 @@ export function ChannelPanel() {
                     </div>
                     <div className="mt-3 flex items-center justify-between gap-2 text-xs text-muted-foreground">
                       <span>
-                        {channel.id === selected?.id ? (
+                        {selectedIds.includes(channel.id) ? (
                           <>
                             <Check className="mr-1 inline h-3.5 w-3.5 text-teal-700" />
                             Selecionado
@@ -383,14 +449,15 @@ export function ChannelPanel() {
             <strong>{selected.channelName}</strong>.
           </p>
         )}
-        {selectedChannelId === "all" && (
-          <p className="flex items-start gap-2 rounded-xl border border-violet-100 bg-violet-50/60 p-3 text-xs leading-5 text-violet-900">
-            <Check className="mt-0.5 h-4 w-4 shrink-0" /> Modo sincronizado
-            ativo: as regras e ações serão executadas em cada canal disponível,
-            com limite, cooldown, fila e auditoria separados. A aprovação humana
-            continua obrigatória.
-          </p>
-        )}
+        {(selectedChannelId === "all" || Array.isArray(selectedChannelId)) &&
+          selectedIds.length > 1 && (
+            <p className="flex items-start gap-2 rounded-xl border border-violet-100 bg-violet-50/60 p-3 text-xs leading-5 text-violet-900">
+              <Check className="mt-0.5 h-4 w-4 shrink-0" /> Modo sincronizado
+              ativo: as regras e ações serão executadas em cada canal
+              disponível, com limite, cooldown, fila e auditoria separados. A
+              aprovação humana continua obrigatória.
+            </p>
+          )}
         {channels.length > 0 && !project && (
           <p className="rounded-xl border border-amber-100 bg-amber-50 p-3 text-xs leading-5 text-amber-900">
             Você pode visualizar este canal, mas somente membros{" "}
