@@ -15,7 +15,7 @@
  *     }]
  *   });
  */
-import { storagePut } from "../storage";
+import { storagePut } from "server/storage";
 import { ENV } from "./env";
 
 // Default model for generated sites. "MODEL_GPT_IMAGE_2" is the forge images.v1
@@ -44,10 +44,10 @@ export async function generateImage(
   options: GenerateImageOptions
 ): Promise<GenerateImageResponse> {
   if (!ENV.forgeApiUrl) {
-    throw new Error("MANUS_API_URL is not configured");
+    throw new Error("BUILT_IN_FORGE_API_URL is not configured");
   }
   if (!ENV.forgeApiKey) {
-    throw new Error("MANUS_API_KEY is not configured");
+    throw new Error("BUILT_IN_FORGE_API_KEY is not configured");
   }
 
   // Build the full URL by appending the service path to the base URL
@@ -87,26 +87,32 @@ export async function generateImage(
   }
 
   const result = (await response.json()) as {
-    image?: { b64Json?: string; url?: string; mimeType?: string };
-    error?: unknown;
+    image?: {
+      b64Json?: string;
+      url?: string;
+      mimeType?: string;
+    };
   };
-  if (result.error || !result.image) throw new Error("Image service did not return an image");
-  let buffer: Buffer;
-  if (result.image.b64Json) {
-    buffer = Buffer.from(result.image.b64Json, "base64");
-  } else if (result.image.url) {
-    const imageResponse = await fetch(result.image.url);
-    if (!imageResponse.ok) throw new Error(`Image download failed (${imageResponse.status})`);
-    buffer = Buffer.from(await imageResponse.arrayBuffer());
-  } else {
-    throw new Error("Image service returned no downloadable bytes");
+  const image = result.image;
+  if (!image?.b64Json && !image?.url) {
+    throw new Error("Image generation returned neither b64Json nor url");
   }
+  const mimeType = image.mimeType ?? "image/png";
+  const buffer = image.b64Json
+    ? Buffer.from(image.b64Json, "base64")
+    : Buffer.from(await (async () => {
+        const imageResponse = await fetch(image.url!);
+        if (!imageResponse.ok) {
+          throw new Error(`Generated image download failed (${imageResponse.status})`);
+        }
+        return imageResponse.arrayBuffer();
+      })());
 
   // Save to S3
   const { url } = await storagePut(
     `generated/${Date.now()}.png`,
     buffer,
-    result.image.mimeType
+    mimeType
   );
   return {
     url,
@@ -130,10 +136,10 @@ export type ListImageModelsResponse = {
  */
 export async function listImageModels(): Promise<ListImageModelsResponse> {
   if (!ENV.forgeApiUrl) {
-    throw new Error("MANUS_API_URL is not configured");
+    throw new Error("BUILT_IN_FORGE_API_URL is not configured");
   }
   if (!ENV.forgeApiKey) {
-    throw new Error("MANUS_API_KEY is not configured");
+    throw new Error("BUILT_IN_FORGE_API_KEY is not configured");
   }
 
   const baseUrl = ENV.forgeApiUrl.endsWith("/")

@@ -30,6 +30,7 @@ export type Message = {
   content: MessageContent | MessageContent[];
   name?: string;
   tool_call_id?: string;
+  tool_calls?: ToolCall[];
 };
 
 export type Tool = {
@@ -140,7 +141,7 @@ const normalizeContentPart = (
 };
 
 const normalizeMessage = (message: Message) => {
-  const { role, name, tool_call_id } = message;
+  const { role, name, tool_call_id, tool_calls } = message;
 
   if (role === "tool" || role === "function") {
     const content = ensureArray(message.content)
@@ -151,6 +152,7 @@ const normalizeMessage = (message: Message) => {
       role,
       name,
       tool_call_id,
+      tool_calls,
       content,
     };
   }
@@ -162,6 +164,7 @@ const normalizeMessage = (message: Message) => {
     return {
       role,
       name,
+      tool_calls,
       content: contentParts[0].text,
     };
   }
@@ -169,6 +172,7 @@ const normalizeMessage = (message: Message) => {
   return {
     role,
     name,
+    tool_calls,
     content: contentParts,
   };
 };
@@ -212,15 +216,18 @@ const normalizeToolChoice = (
   return toolChoice;
 };
 
-const platformApiBase = () => {
-  if (!ENV.forgeApiUrl.trim()) throw new Error("MANUS_API_URL is not configured");
-  return ENV.forgeApiUrl.replace(/\/$/, "");
+const getForgeApiUrl = () => process.env.BUILT_IN_FORGE_API_URL?.trim() ?? "";
+const getForgeApiKey = () => process.env.BUILT_IN_FORGE_API_KEY?.trim() ?? "";
+
+const resolveApiUrl = () => {
+  const apiUrl = getForgeApiUrl();
+  if (!apiUrl) throw new Error("BUILT_IN_FORGE_API_URL is not configured");
+  return `${apiUrl.replace(/\/$/, "")}/v1/chat/completions`;
 };
-const resolveApiUrl = () => `${platformApiBase()}/v1/chat/completions`;
 
 const assertApiKey = () => {
-  if (!ENV.forgeApiKey) {
-    throw new Error("MANUS_API_KEY is not configured");
+  if (!getForgeApiKey()) {
+    throw new Error("BUILT_IN_FORGE_API_KEY is not configured");
   }
 };
 
@@ -406,7 +413,7 @@ export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
     method: "POST",
     headers: {
       "content-type": "application/json",
-      authorization: `Bearer ${ENV.forgeApiKey}`,
+      authorization: `Bearer ${getForgeApiKey()}`,
     },
     body: JSON.stringify(payload),
   });
@@ -436,10 +443,12 @@ export type ModelsResponse = {
 export async function listLLMModels(): Promise<ModelsResponse> {
   assertApiKey();
 
-  const url = `${platformApiBase()}/v1/models`;
+  const apiUrl = getForgeApiUrl();
+  if (!apiUrl) throw new Error("BUILT_IN_FORGE_API_URL is not configured");
+  const url = `${apiUrl.replace(/\/$/, "")}/v1/models`;
 
   const response = await fetchWithBackoff(url, {
-    headers: { authorization: `Bearer ${ENV.forgeApiKey}` },
+    headers: { authorization: `Bearer ${getForgeApiKey()}` },
   });
 
   if (!response.ok) {

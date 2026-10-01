@@ -1,0 +1,11 @@
+{
+  "routes": [
+    { "path": "/", "title": "Painel principal" },
+    { "path": "/leitura", "title": "Leitura" },
+    { "path": "/chat", "title": "Chat editorial" },
+    { "path": "/fila", "title": "Fila editorial" },
+    { "path": "/metricas", "title": "Métricas" },
+    { "path": "/regras", "title": "Regras editoriais" },
+    { "path": "/404", "title": "Não encontrado" }
+  ]
+}

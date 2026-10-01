@@ -1,0 +1,6 @@
+ALTER TABLE `chainEvents` ADD CONSTRAINT `chainEvents_publication_fk` FOREIGN KEY (`publicationId`) REFERENCES `publications`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `commentObservations` ADD CONSTRAINT `commentObservations_video_fk` FOREIGN KEY (`videoId`) REFERENCES `videos`(`id`) ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `drafts` ADD CONSTRAINT `drafts_video_fk` FOREIGN KEY (`videoId`) REFERENCES `videos`(`id`) ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `drafts` ADD CONSTRAINT `drafts_owner_fk` FOREIGN KEY (`createdBy`) REFERENCES `users`(`id`) ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `publications` ADD CONSTRAINT `publications_draft_fk` FOREIGN KEY (`draftId`) REFERENCES `drafts`(`id`) ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE `publications` ADD CONSTRAINT `publications_video_fk` FOREIGN KEY (`videoId`) REFERENCES `videos`(`id`) ON DELETE restrict ON UPDATE no action;

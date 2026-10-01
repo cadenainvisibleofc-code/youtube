@@ -1,0 +1,1 @@
+DROP INDEX `youtubeConnections_project_channel_idx` ON `youtubeConnections`;

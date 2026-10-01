@@ -1,0 +1,13 @@
+Cadena Invisible — pacote sanitizado completo
+Data: 2026-09-30
+Git HEAD usado na geração: 0f4948d66d38f10674ffe1561ac1bb21db2136d0
+Git origin/main: 0f4948d66d38f10674ffe1561ac1bb21db2136d0
+Arquivos versionados na árvore: 240
+Testes previamente aprovados: 125 em 23 arquivos
+Gates previamente aprovados: pnpm check, pnpm build, pnpm portability:check
+Código publicado estável: 9eb109cb01e6a6610fa1a08707893249ce3dbd0e
+Produção publicada: https://cadenainv-3aa2uun3.manus.space
+Migrations ativas: baseline 0000 + 0001–0017
+Governança editorial: Pacto dos Guardiões v1 + Métricas de cuidado e colaboração v1
+Secrets reais: NÃO incluídos
+Metadato local excluído: .manus-starter-init.json

@@ -21,9 +21,9 @@ describe("current platform integration", () => {
     expect(appended).toHaveLength(0);
   });
   it("does not guess a production API when the project environment is absent", async () => {
-    vi.stubEnv("MANUS_API_URL", ""); vi.stubEnv("MANUS_API_KEY", "test-only");
+    vi.stubEnv("BUILT_IN_FORGE_API_URL", ""); vi.stubEnv("BUILT_IN_FORGE_API_KEY", "test-only");
     const request = vi.fn(); vi.stubGlobal("fetch", request);
-    await expect(listLLMModels()).rejects.toThrow("MANUS_API_URL");
+    await expect(listLLMModels()).rejects.toThrow("BUILT_IN_FORGE_API_URL");
     expect(request).not.toHaveBeenCalled();
   });
   it("persists URL-only image results through current managed storage", async () => {
@@ -41,7 +41,7 @@ describe("current platform integration", () => {
   });
   it("uses a distinct secure app cookie behind the HTTPS Preview proxy", () => {
     expect(COOKIE_NAME).not.toBe("app_session_id");
-    expect(getSessionCookieOptions({ protocol: "http", headers: {} } as never)).toMatchObject({ secure: true, httpOnly: true, sameSite: "none" });
+    expect(getSessionCookieOptions({ protocol: "http", headers: { "x-forwarded-proto": "https" } } as never)).toMatchObject({ secure: true, httpOnly: true, sameSite: "none" });
   });
   it("binds signed app sessions to this project and accepts an empty display name", async () => {
     vi.stubEnv("MANUS_PROJECT_ID", "project-test");
