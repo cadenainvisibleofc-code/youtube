@@ -10,7 +10,9 @@ O código foi convertido de Drizzle/MySQL-TiDB para Drizzle/PostgreSQL (`node-po
 
 A migration PostgreSQL foi mantida isolada em `drizzle/pg/`, sem misturar o histórico MySQL/TiDB. O schema foi aplicado ao Supabase em migrations controladas: `pg_schema_part_1_types_and_core_tables`, `pg_schema_part_2_remaining_tables`, `pg_schema_part_3_constraints_indexes`, `pg_schema_cleanup_duplicate_index` e `enable_rls_server_side_only`.
 
-A estrutura verificada no Supabase contém **23 tabelas, 25 enums, 23 FKs, 19 índices e zero linhas**. RLS está habilitado nas 23 tabelas, sem políticas públicas; o acesso pretendido é exclusivamente server-side.
+A estrutura verificada no Supabase contém **23 tabelas, 25 enums e RLS habilitado nas 23 tabelas**, sem políticas públicas; o acesso pretendido é exclusivamente server-side. O estado atual contém 1 projeto, 1 membro, 5 slots `projectChannels` e 5 conexões `youtubeConnections`; `drafts`, `publicationOutbox` e `publications` permanecem sem linhas.
+
+Em 2026-10-01 foi aplicada a migration incremental `integrity_and_outbox_fencing`, depois de preflight sem duplicatas. Ela adiciona índices de cobertura de FKs, unicidade de publicação por draft, `leaseToken`/`leaseVersion` para fencing da outbox, limite estrutural de cinco slots e triggers de consistência entre slot, vídeo, conexão, draft, outbox e publicação. Nenhuma linha foi removida, reatribuída ou backfilled.
 
 ## Cofre e runtime
 
@@ -28,4 +30,4 @@ Os quatro secrets de produção do YouTube OAuth foram cadastrados no cofre WebD
 
 ## Próxima fase
 
-O banco está pronto para conexão server-side e a conexão real foi comprovada. O próximo passo é fazer login no painel publicado, confirmar o `OWNER_OPEN_ID` e executar o fluxo OAuth do YouTube com uma conta de teste. O backfill deve continuar separado, com `ALLOW_PROJECT_BACKFILL=1`, identidade confirmada e decisão explícita sobre quais dados históricos serão migrados. Nenhuma migração de dados foi feita; o Supabase permanece vazio.
+O banco está pronto para conexão server-side e a conexão real foi comprovada. O próximo passo é fazer login no painel publicado, confirmar o `OWNER_OPEN_ID` e executar um teste editorial controlado com publicação externa desativada. O backfill deve continuar separado, com `ALLOW_PROJECT_BACKFILL=1`, identidade confirmada e decisão explícita sobre quais dados históricos serão migrados. Nenhuma migração de dados editoriais foi feita.

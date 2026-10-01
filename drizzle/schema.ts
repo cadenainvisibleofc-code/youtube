@@ -227,6 +227,7 @@ export const publications = pgTable("publications", {
   errorCode: varchar("errorCode", { length: 120 }),
   notes: text("notes"),
 }, table => ({
+  draftUnique: unique("publications_draft_unique").on(table.draftId),
   draftFk: foreignKey({ columns: [table.draftId], foreignColumns: [drafts.id], name: "publications_draft_fk" }).onDelete("restrict"),
   videoFk: foreignKey({ columns: [table.videoId], foreignColumns: [videos.id], name: "publications_video_fk" }).onDelete("restrict"),
   projectChannelIdx: index("publications_project_channel_idx").on(table.projectChannelId),
@@ -345,6 +346,8 @@ export const publicationOutbox = pgTable("publicationOutbox", {
   idempotencyKey: varchar("idempotencyKey", { length: 180 }).notNull().unique(),
   status: publicationOutboxStatusEnum("status").default("pending").notNull(),
   attempts: integer("attempts").default(0).notNull(),
+  leaseToken: varchar("leaseToken", { length: 64 }),
+  leaseVersion: integer("leaseVersion").default(0).notNull(),
   nextAttemptAt: timestamp("nextAttemptAt", { withTimezone: true }).defaultNow().notNull(),
   lockedUntil: timestamp("lockedUntil", { withTimezone: true }),
   youtubeCommentId: varchar("youtubeCommentId", { length: 128 }),

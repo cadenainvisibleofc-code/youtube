@@ -106,6 +106,14 @@ Os riscos de constraint matemática do teto de cinco, correspondência composta 
 - O feedback humano agora registra motivo categorizado em `editorialFeedback.changeSummary` sem nova migration.
 - A outbox renova o lease durante chamadas externas longas. Fencing token, finalização transacional completa e resolução automática segura de estados `uncertain` continuam abertos.
 
+### Migration Supabase aplicada — 2026-10-01
+
+- Preflight: zero duplicatas de publicação por draft, canais por projeto ou outbox por draft; nenhum projeto acima de cinco slots não revogados.
+- Aplicada `integrity_and_outbox_fencing` no projeto `PROJETO CADENA YOUTUBE`.
+- Pós-migration: `leaseToken`/`leaseVersion`, índices de FKs, unicidade de publicação, trigger de limite de cinco slots e triggers de consistência de canal confirmados.
+- Estado preservado: 1 projeto, 1 membro, 5 canais, 5 conexões, 0 drafts, 0 outbox e 0 publicações.
+- RLS permaneceu habilitado nas 23 tabelas, sem políticas públicas. Advisors agora mostram somente avisos informativos de índices ainda não usados; nenhuma policy pública foi criada.
+
 ## Auditoria somente leitura do Supabase — 2026-10-01
 
 - Projeto confirmado: `PROJETO CADENA YOUTUBE`, ref `thliiwlagdmnqjwzmiyt`, região `sa-east-1`, estado `ACTIVE_HEALTHY`, PostgreSQL 17.

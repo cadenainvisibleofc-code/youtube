@@ -27,13 +27,14 @@
 - [x] Runtime publicado após a configuração RelayModels e healthcheck confirmado com `200`.
 - [x] Auditoria somente leitura do Supabase `PROJETO CADENA YOUTUBE`: projeto ativo/saudável, PostgreSQL 17, cinco migrations registradas, 23 tabelas com RLS e zero políticas públicas.
 - [x] Escopo `projectChannelId` confirmado em `automationSettings`, `drafts`, `publicationOutbox`, `publications` e `youtubeConnections`.
-- [x] Nenhum projeto, membro, canal, draft, outbox ou publicação operacional ainda foi criado; não foi feito backfill nem escrita durante esta auditoria.
-- [x] Uma conexão YouTube legada sem `projectChannelId` foi identificada; seus campos de tokens estão preenchidos e cifrados. Ela foi preservada para reconciliação controlada após o login, sem inferir projeto ou canal.
-- [ ] Reconciliar a conexão YouTube legada somente após confirmar a identidade, o projeto e o `channelId` no fluxo autenticado.
+- [x] Auditoria pós-migration confirmou 1 projeto, 1 membro, 5 slots e 5 conexões YouTube; drafts, outbox e publicações permanecem em zero.
+- [x] Não foi feito backfill nem escrita de conteúdo editorial; as cinco conexões existentes foram preservadas e não tiveram tokens lidos ou alterados.
+- [x] Migration incremental `integrity_and_outbox_fencing` aplicada após preflight sem duplicatas: índices de FK, unicidade por draft, fencing da outbox, limite estrutural de cinco slots e triggers de consistência de canal.
+- [ ] Testar o fluxo autenticado de criação de draft e publicação controlada sem executar publicação externa durante o teste.
 - [ ] Teste funcional do chat autenticado com uma mensagem e uma ação de baixo risco.
 - [ ] `pnpm portability:check` local em `ready` — o comando foi executado e permanece em `needs-attention` somente porque `OWNER_OPEN_ID` depende do primeiro login; nenhum secret foi impresso.
 - [x] Secrets de produção do YouTube OAuth cadastrados no cofre WebDev: Client ID, Client Secret, callback HTTPS e chave de cifragem.
-- [ ] Rotação da senha do Supabase — adiada por decisão do usuário.
+- [ ] Rotação da senha do Supabase — adiada por decisão do usuário; recomendada antes de uso produtivo amplo.
 
 ## O que foi trazido do Google Cloud Console
 

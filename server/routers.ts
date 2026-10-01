@@ -15,7 +15,7 @@ import { createHeartbeatJob, updateHeartbeatJob } from "./_core/heartbeat";
 import { parse as parseCookie } from "cookie";
 import { archiveChatConversation, createChatConversation, getChatHistory, listChatConversations, sendChatMessage } from "./chat-agent";
 import { listEditorialMemories, proposeEditorialMemory, reviewEditorialMemory } from "./editorial-memory";
-import { processPublicationOutbox, reconcilePublishedOutbox } from "./publication-outbox";
+import { processPublicationOutbox, reconcilePublishedOutbox, requeueUncertainPublicationOutbox } from "./publication-outbox";
 
 export const appRouter = router({
   system: systemRouter,
@@ -102,6 +102,9 @@ export const appRouter = router({
     publishApproved: protectedProcedure
       .input(z.object({ limit: z.number().int().min(1).max(30).optional(), projectChannelId: z.number().int().positive().optional() }).optional())
       .mutation(({ ctx, input }) => processPublicationOutbox(ctx.user.openId, input?.limit ?? 30, input?.projectChannelId)),
+    requeueUncertainPublication: protectedProcedure
+      .input(z.object({ outboxId: z.number().int().positive(), projectChannelId: z.number().int().positive().optional() }))
+      .mutation(({ ctx, input }) => requeueUncertainPublicationOutbox(ctx.user.openId, input.outboxId, input.projectChannelId)),
     reconcilePublished: protectedProcedure
       .input(z.object({ limit: z.number().int().min(1).max(30).optional(), projectChannelId: z.number().int().positive().optional() }).optional())
       .mutation(({ ctx, input }) => reconcilePublishedOutbox(ctx.user.openId, input?.limit ?? 30, input?.projectChannelId)),
