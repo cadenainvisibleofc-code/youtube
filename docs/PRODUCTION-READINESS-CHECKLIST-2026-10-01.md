@@ -23,6 +23,7 @@
 - [x] Guia sanitizado de até cinco canais criado em `docs/GUIA-CONEXAO-5-CANAIS-YOUTUBE-v1.md`.
 - [x] Política operacional v2 aplicada: limite diário por canal, cooldown contextual por vídeo/thread, taxonomia ampliável, escrita flexível e convites apenas com interesse explícito.
 - [x] Propostas automáticas de aprendizado permanecem pendentes e não entram no contexto antes de aprovação humana.
+- [x] Auditoria de lacunas corrigiu o bloqueio de múltiplos vídeos por canal, ajustou a cota de links ao limite configurado, registrou motivos de feedback humano e renovou leases da outbox durante chamadas externas.
 - [x] Runtime publicado após a configuração RelayModels e healthcheck confirmado com `200`.
 - [x] Auditoria somente leitura do Supabase `PROJETO CADENA YOUTUBE`: projeto ativo/saudável, PostgreSQL 17, cinco migrations registradas, 23 tabelas com RLS e zero políticas públicas.
 - [x] Escopo `projectChannelId` confirmado em `automationSettings`, `drafts`, `publicationOutbox`, `publications` e `youtubeConnections`.

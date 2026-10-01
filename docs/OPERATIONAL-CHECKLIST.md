@@ -32,7 +32,7 @@ Organizar o Cadena Invisible em um ciclo reproduzível de **separação, descobe
 - [x] Bloquear linguagem comercial, pagamento, escassez, promessa e pressão.
 - [x] Manter proporção editorial de aproximadamente 80% sem link e 10% com link, sempre sujeita a revisão.
 - [ ] Adicionar comparação lado a lado entre evidência do vídeo, comentário-fonte e texto gerado.
-- [ ] Registrar feedback humano por motivo: genérico, artificial, fora de contexto, comercial ou adequado.
+- [x] Registrar feedback humano por motivo: genérico, artificial, fora de contexto, comercial ou adequado.
 
 ### 4. Publicação
 
@@ -58,6 +58,14 @@ Organizar o Cadena Invisible em um ciclo reproduzível de **separação, descobe
 - [x] Usar primeira pessoa somente quando houver memória editorial confirmada.
 - [x] Medir ressonância observada sem prometer alcance, ranking ou conversão.
 - [x] Manter aprovação humana antes de qualquer publicação.
+
+## Correções de lacunas — 2026-10-01
+
+- [x] Remover o bloqueio indevido que permitia somente um vídeo por canal em cada rodada; o limite agora é o limite diário configurado por canal.
+- [x] Corrigir a proporção de links para usar o limite efetivo do canal, inclusive quando configurado acima de 30 rascunhos.
+- [x] Renovar o lease da outbox durante chamadas externas longas, reduzindo o risco de reaquisição prematura.
+- [ ] Implementar fencing token e finalização transacional completa da outbox antes de afirmar exactly-once externo.
+- [ ] Resolver estados `uncertain` somente por reconciliação ou requeue manual auditado; não automatizar retry cego.
 
 ## Critério de avanço
 

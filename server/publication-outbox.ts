@@ -17,6 +17,13 @@ function isUncertainError(error: unknown) {
   return error instanceof Error && /timeout|network|fetch|não respondeu|nao respondeu|502|503|504/i.test(error.message);
 }
 
+async function renewPublicationLease(database: Database, outboxId: number) {
+  const now = new Date();
+  const lockedUntil = new Date(now.getTime() + LEASE_MS);
+  const updated = await database.update(publicationOutbox).set({ lockedUntil, updatedAt: now }).where(and(eq(publicationOutbox.id, outboxId), eq(publicationOutbox.status, "processing"))).returning({ id: publicationOutbox.id });
+  return updated.length === 1;
+}
+
 export async function claimPublicationOutbox(ownerOpenId: string, limit = 10, projectChannelId?: number) {
   const database = requireDatabase(await getDb());
   const now = new Date();
@@ -65,7 +72,14 @@ export async function processPublicationOutbox(ownerOpenId: string, limit = 10, 
       } else if (source[0].draft.status !== "publishing") {
         throw new Error("Somente rascunhos aprovados podem entrar no publisher");
       }
-      const published = await publishYouTubeComment({ ownerOpenId: item.ownerOpenId, projectChannelId, videoId: source[0].video.youtubeVideoId, parentCommentId: source[0].draft.parentCommentId, text: source[0].draft.text, idempotencyKey: item.idempotencyKey });
+      if (!(await renewPublicationLease(database, item.id))) throw new Error("Lease da publicação expirou antes da chamada externa");
+      const leaseRenewalTimer = setInterval(() => { void renewPublicationLease(database, item.id); }, Math.max(30_000, Math.floor(LEASE_MS / 3)));
+      let published;
+      try {
+        published = await publishYouTubeComment({ ownerOpenId: item.ownerOpenId, projectChannelId, videoId: source[0].video.youtubeVideoId, parentCommentId: source[0].draft.parentCommentId, text: source[0].draft.text, idempotencyKey: item.idempotencyKey });
+      } finally {
+        clearInterval(leaseRenewalTimer);
+      }
       const existingPublication = await database.select({ id: publications.id }).from(publications).where(eq(publications.draftId, item.draftId)).limit(1);
       let publicationId: number;
       if (existingPublication[0]) {

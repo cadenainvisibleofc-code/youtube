@@ -140,6 +140,7 @@ export const appRouter = router({
         status: z.enum(["approved", "discarded", "edited"]),
         text: z.string().max(5000).optional(),
         projectChannelId: z.number().int().positive().optional(),
+        feedbackReason: z.enum(["generic", "artificial", "out_of_context", "commercial", "adequate"]).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         try {

@@ -99,6 +99,13 @@ A autorização é do projeto/canal, mas buscas de conexão usam `ownerOpenId`. 
 
 Os riscos de constraint matemática do teto de cinco, correspondência composta entre FKs, backfill ambíguo e exactly-once externo continuam abertos e não foram mascarados por esta rodada.
 
+## Auditoria de lacunas — 2026-10-01
+
+- Corrigido o bloqueio indevido que restringia uma rodada a um único vídeo por canal; o limite volta a ser o teto diário configurável por canal.
+- Corrigido o cálculo de links para usar o limite efetivo, e não um teto implícito de 30 itens.
+- O feedback humano agora registra motivo categorizado em `editorialFeedback.changeSummary` sem nova migration.
+- A outbox renova o lease durante chamadas externas longas. Fencing token, finalização transacional completa e resolução automática segura de estados `uncertain` continuam abertos.
+
 ## Auditoria somente leitura do Supabase — 2026-10-01
 
 - Projeto confirmado: `PROJETO CADENA YOUTUBE`, ref `thliiwlagdmnqjwzmiyt`, região `sa-east-1`, estado `ACTIVE_HEALTHY`, PostgreSQL 17.

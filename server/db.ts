@@ -181,7 +181,9 @@ function buildDemoSnapshot() {
   };
 }
 
-export async function updateDraftReview(input: { id: number; ownerId: number; status: "approved" | "discarded" | "edited"; text?: string; projectChannelId?: number }) {
+export type EditorialFeedbackReason = "generic" | "artificial" | "out_of_context" | "commercial" | "adequate";
+
+export async function updateDraftReview(input: { id: number; ownerId: number; status: "approved" | "discarded" | "edited"; text?: string; projectChannelId?: number; feedbackReason?: EditorialFeedbackReason }) {
   const db = await getDb();
   if (input.id < 0) {
     const existing = currentDemoDrafts.find(draft => draft.id === input.id);
@@ -232,7 +234,7 @@ export async function updateDraftReview(input: { id: number; ownerId: number; st
         outcome: input.status,
         originalText: existing[0].text,
         finalText: input.status === "discarded" ? null : finalText,
-        changeSummary: JSON.stringify({ edited: input.text !== undefined, originalLength: existing[0].text.length, finalLength: finalText.length }),
+        changeSummary: JSON.stringify({ edited: input.text !== undefined, reason: input.feedbackReason ?? "adequate", originalLength: existing[0].text.length, finalLength: finalText.length }),
       });
       await transaction.insert(chainEvents).values({
         eventType: `draft_${input.status}`,

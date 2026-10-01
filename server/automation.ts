@@ -372,12 +372,11 @@ async function runAutomationUnlocked(input: RunAutomationInput): Promise<Automat
     await markAutomationRun(input.ownerOpenId, input.projectChannelId);
     return result;
   }
-  const maxLinkDrafts = Math.max(1, Math.floor((requestedDraftLimit ?? 30) * 0.1));
+  const maxLinkDrafts = Math.max(1, Math.floor((requestedDraftLimit ?? settings.dailyLimit) * 0.1));
   const searchQueries = expandSearchQueries(input.searchQueries?.map(query => query.trim()).filter(Boolean) ?? settings.searchQueries);
   const autoPublishRequested = input.autoPublishOverride ?? settings.autoPublish;
   if (autoPublishRequested) result.reasons.push("publicação automática bloqueada no MVP; rascunhos seguem para revisão humana");
   const candidatesById = new Map<string, YouTubeCandidate>((input.candidatePool ?? []).map(candidate => [candidate.videoId, candidate]));
-  const selectedChannelIds = new Set<string>();
   for (const query of input.candidatePool ? [] : searchQueries) {
     if (candidatesById.size >= remaining * 3) break;
     let candidates: YouTubeCandidate[];
@@ -403,11 +402,6 @@ async function runAutomationUnlocked(input: RunAutomationInput): Promise<Automat
     if (!candidate.eligibility.eligible) {
       result.skipped++;
       result.reasons.push(`inelegível: ${candidate.title} — ${candidate.eligibility.reasons.join(", ") || "critérios técnicos não atendidos"}`);
-      continue;
-    }
-    if (selectedChannelIds.has(candidate.channelId)) {
-      result.skipped++;
-      result.reasons.push(`outro vídeo do mesmo canal já foi selecionado nesta rodada: ${candidate.title}`);
       continue;
     }
     let comments;
@@ -502,7 +496,6 @@ async function runAutomationUnlocked(input: RunAutomationInput): Promise<Automat
       continue;
     }
     result.drafted++;
-    selectedChannelIds.add(candidate.channelId);
     remaining--;
 
     result.heldForReview++;
