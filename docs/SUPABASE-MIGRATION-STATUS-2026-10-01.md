@@ -14,7 +14,7 @@ A estrutura verificada no Supabase contém **23 tabelas, 25 enums, 23 FKs, 19 í
 
 ## Cofre e runtime
 
-O secret seguro `SUPABASE_DATABASE_URL` foi cadastrado no cofre do projeto WebDev e sincronizado. A URI usa o Session Pooler IPv4 do Supabase, com caracteres especiais da senha percent-encoded. O runtime prefere `SUPABASE_DATABASE_URL` e mantém fallback compatível para `DATABASE_URL`. A senha não foi gravada em arquivo ou comando.
+O secret seguro `SUPABASE_DATABASE_URL` foi cadastrado no cofre do projeto WebDev e sincronizado. A URI usa o Session Pooler IPv4 do Supabase, com caracteres especiais da senha percent-encoded. O runtime prefere `SUPABASE_DATABASE_URL` e mantém fallback compatível para `DATABASE_URL`. A senha não foi gravada em arquivo ou comando. A rotação da senha foi discutida após o compartilhamento acidental e ficou adiada por decisão do usuário; deve ser feita antes do uso produtivo.
 
 O shell local mascara secrets protegidos como `*****REDACTED*****`, portanto o auditor local não pode consumir a URI real. No entanto, o runtime publicado `https://cadenaiv-tqbkbmxw.manus.space` foi validado end-to-end: `/api/health` respondeu `200`, a operação tRPC `analytics.recordReadingVisit` inseriu uma linha no Supabase e a leitura direta confirmou os valores. Um segundo ciclo com o mesmo token confirmou `onConflictDoUpdate`, alterando `source`, `campaign`, `videoReference`, `secondsRead` e `completed`. Os dois registros temporários foram removidos; a verificação final retornou zero registros de smoke test.
 
