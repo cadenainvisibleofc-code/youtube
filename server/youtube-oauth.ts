@@ -287,11 +287,13 @@ export function registerYouTubeOAuthRoutes(app: Express) {
     try {
       decoded = decodeYouTubeOAuthState(state);
     } catch {
+      console.warn("[YouTube OAuth] State rejected: signature_or_expiry");
       res.status(403).json({ error: "invalid oauth state" });
       return;
     }
     const expectedNonce = parseCookieHeader(req.headers.cookie ?? "")[STATE_COOKIE];
     if (!safeEqualText(decoded.nonce, expectedNonce)) {
+      console.warn("[YouTube OAuth] State rejected: cookie_mismatch", { hasStateCookie: Boolean(expectedNonce) });
       res.status(403).json({ error: "invalid oauth state" });
       return;
     }
