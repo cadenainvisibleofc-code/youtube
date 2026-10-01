@@ -16,7 +16,7 @@
 - [x] `pnpm test` aprovado: 124 testes passaram, 1 foi pulado por ausência de credenciais reais.
 - [x] `pnpm build` aprovado.
 - [x] Aprovação humana permanece obrigatória; o agente não expõe mais a opção de autopublicação.
-- [ ] Chave RelayModels cadastrada no cofre de produção; o modelo configurado precisa ser um ID disponível para a chave (o valor antigo `gpt-4o-mini` retornou `model_not_found`).
+- [x] Chave RelayModels cadastrada no cofre de produção; o valor inválido `gpt-4o-mini` foi substituído por `gpt-5.6-sol` após o erro `model_not_found`.
 - [x] Fallback do código atualizado para `gpt-5.6-sol`, modelo recomendado pelo RelayModels para agentes com ferramentas.
 - [x] Runtime publicado após a configuração RelayModels e healthcheck confirmado com `200`.
 - [ ] Teste funcional do chat autenticado com uma mensagem e uma ação de baixo risco.
