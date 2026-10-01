@@ -49,9 +49,15 @@ describe("YouTube OAuth configuration", () => {
 
   it("reports the four required server-side values without exposing them", () => {
     const validEncryptionKey = Boolean(original.encryptionKey && Buffer.from(original.encryptionKey, "base64").length === 32);
+    const expectedMissing = [
+      !original.clientId ? "YOUTUBE_OAUTH_CLIENT_ID" : null,
+      !original.clientSecret ? "YOUTUBE_OAUTH_CLIENT_SECRET" : null,
+      !original.redirectUri ? "YOUTUBE_OAUTH_REDIRECT_URI" : null,
+      !validEncryptionKey ? "YOUTUBE_TOKEN_ENCRYPTION_KEY inválida" : null,
+    ].filter((value): value is string => value !== null);
     expect(youtubeOAuthConfigStatus()).toEqual({
       configured: Boolean(original.clientId && original.clientSecret && original.redirectUri && validEncryptionKey),
-      missing: [],
+      missing: expectedMissing,
       hasClientId: Boolean(original.clientId),
       hasClientSecret: Boolean(original.clientSecret),
       hasRedirectUri: Boolean(original.redirectUri),

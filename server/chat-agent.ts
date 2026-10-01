@@ -111,7 +111,6 @@ const tools: Tool[] = [
         type: "object",
         properties: {
           enabled: { type: "boolean" },
-          autoPublish: { type: "boolean" },
           minChannelIntervalDays: { type: "integer", minimum: 30, maximum: 365 },
           includeLink: { type: "boolean" },
           searchQueries: { type: "array", items: { type: "string", minLength: 2, maxLength: 120 }, maxItems: 10 },
@@ -293,7 +292,7 @@ async function executeTool(name: string, args: Record<string, unknown>, ownerOpe
   }
   if (name === "get_automation_settings") return getAutomationSettings(ownerOpenId);
   if (name === "update_automation_settings") {
-    const allowed = ["enabled", "autoPublish", "minChannelIntervalDays", "includeLink", "searchQueries"] as const;
+    const allowed = ["enabled", "minChannelIntervalDays", "includeLink", "searchQueries"] as const;
     const input: Record<string, unknown> = {};
     for (const key of allowed) if (args[key] !== undefined) input[key] = args[key];
     return updateAutomationSettings(ownerOpenId, input as Parameters<typeof updateAutomationSettings>[1]);
