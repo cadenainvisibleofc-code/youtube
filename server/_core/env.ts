@@ -1,3 +1,6 @@
+const DEFAULT_EXTERNAL_LLM_MODEL = "gpt-5.6-sol";
+const configuredExternalLlmModel = process.env.EXTERNAL_LLM_MODEL?.trim();
+
 export const ENV = {
   appId: process.env.MANUS_PROJECT_ID ?? process.env.VITE_APP_ID ?? "",
   cookieSecret: process.env.MANUS_JWT_SECRET ?? process.env.JWT_SECRET ?? "",
@@ -10,5 +13,5 @@ export const ENV = {
   externalLlmEnabled: process.env.EXTERNAL_LLM_ENABLED ? process.env.EXTERNAL_LLM_ENABLED === "1" : Boolean(process.env.EXTERNAL_LLM_API_KEY),
   externalLlmBaseUrl: process.env.EXTERNAL_LLM_BASE_URL ?? "https://api.relaymodels.com/v1",
   externalLlmApiKey: process.env.EXTERNAL_LLM_API_KEY ?? "",
-  externalLlmModel: process.env.EXTERNAL_LLM_MODEL ?? "gpt-5.6-sol",
+  externalLlmModel: configuredExternalLlmModel && !/^sk-[A-Za-z0-9]/.test(configuredExternalLlmModel) ? configuredExternalLlmModel : DEFAULT_EXTERNAL_LLM_MODEL,
 };

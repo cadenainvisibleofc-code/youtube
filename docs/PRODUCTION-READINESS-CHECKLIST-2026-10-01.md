@@ -18,6 +18,7 @@
 - [x] Aprovação humana permanece obrigatória; o agente não expõe mais a opção de autopublicação.
 - [x] Chave RelayModels cadastrada no cofre de produção; o valor inválido `gpt-4o-mini` foi substituído por `gpt-5.6-sol` após o erro `model_not_found`.
 - [x] Fallback do código atualizado para `gpt-5.6-sol`, modelo recomendado pelo RelayModels para agentes com ferramentas.
+- [x] Fallback defensivo adicionado: valores `sk-...` em `EXTERNAL_LLM_MODEL` nunca são enviados ao RelayModels como modelo.
 - [x] Runtime publicado após a configuração RelayModels e healthcheck confirmado com `200`.
 - [ ] Teste funcional do chat autenticado com uma mensagem e uma ação de baixo risco.
 - [ ] `pnpm portability:check` local em `ready` — o checkout não recebe secrets protegidos; a identidade pós-login ainda falta.
