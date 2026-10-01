@@ -7,8 +7,8 @@ export const ENV = {
   isProduction: process.env.NODE_ENV === "production",
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
-  externalLlmEnabled: process.env.EXTERNAL_LLM_ENABLED === "1",
-  externalLlmBaseUrl: process.env.EXTERNAL_LLM_BASE_URL ?? "",
+  externalLlmEnabled: process.env.EXTERNAL_LLM_ENABLED ? process.env.EXTERNAL_LLM_ENABLED === "1" : Boolean(process.env.EXTERNAL_LLM_API_KEY),
+  externalLlmBaseUrl: process.env.EXTERNAL_LLM_BASE_URL ?? "https://api.relaymodels.com/v1",
   externalLlmApiKey: process.env.EXTERNAL_LLM_API_KEY ?? "",
-  externalLlmModel: process.env.EXTERNAL_LLM_MODEL ?? "gemini-3.7-flash",
+  externalLlmModel: process.env.EXTERNAL_LLM_MODEL ?? "gpt-4o-mini",
 };
