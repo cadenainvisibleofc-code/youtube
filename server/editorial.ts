@@ -19,6 +19,11 @@ function includesAnyTerm(value: string, terms: string[]) {
   return terms.some(term => normalized.includes(normalizeEditorialText(term)));
 }
 
+export function isAllowedOfficialProtectionUrl(value: string) {
+  const configured = (process.env.OFFICIAL_PROTECTION_URLS ?? "").split(",").map(url => url.trim()).filter(Boolean);
+  return configured.includes(value.replace(/[.,;!?]+$/, ""));
+}
+
 /** Detecta sinais de texto publicado pelo próprio canal, não de uma pessoa da conversa. */
 export function isLikelyChannelOwnerComment(text: string | undefined) {
   if (!text) return false;
@@ -77,7 +82,7 @@ export function canApproveDraft(input: {
   text?: string;
 }) {
   if (input.currentStatus !== "review" && input.currentStatus !== "edited") return false;
-  if (input.containsLink && input.riskLevel !== "low") return false;
+  if (input.containsLink && input.riskLevel !== "low" && input.text === undefined) return false;
   if (input.text !== undefined && !validateFinalDraft({ text: input.text, riskLevel: input.riskLevel, containsLink: input.containsLink }).valid) return false;
   return true;
 }
@@ -90,13 +95,17 @@ export function validateFinalDraft(input: { text: string; riskLevel: RiskLevel; 
   const normalized = normalizeEditorialText(text);
   const urls = text.match(/https?:\/\/[^\s)]+/gi) ?? [];
   const hasAnyUrl = urls.length > 0;
-  const hasAllowedUrl = urls.every(url => url.replace(/[.,;!?]+$/, "") === ALLOWED_READING_URL);
+  const normalizedUrls = urls.map(url => url.replace(/[.,;!?]+$/, ""));
+  const hasAllowedUrl = normalizedUrls.every(url => url === ALLOWED_READING_URL || isAllowedOfficialProtectionUrl(url));
+  const hasProtectionUrl = normalizedUrls.length > 0 && normalizedUrls.every(url => isAllowedOfficialProtectionUrl(url));
   const detectedRisk = classifyRisk(text).riskLevel;
   const riskRank: Record<RiskLevel, number> = { low: 0, medium: 1, high: 2, critical: 3 };
   const effectiveRisk = riskRank[detectedRisk] > riskRank[input.riskLevel] ? detectedRisk : input.riskLevel;
   if (hasAnyUrl && !hasAllowedUrl) return { valid: false as const, reason: "O texto contém uma URL não permitida" };
-  if (effectiveRisk === "high" || effectiveRisk === "critical") return { valid: false as const, reason: "O texto final exige revisão reforçada por risco" };
-  if (input.containsLink && (!hasAllowedUrl || effectiveRisk !== "low" || !text.includes(READING_BLOCK_MARKER))) return { valid: false as const, reason: "O link só pode ser a leitura permitida em bloco separado e contexto de baixo risco" };
+  if (hasProtectionUrl && effectiveRisk !== "high" && effectiveRisk !== "critical") return { valid: false as const, reason: "Recursos oficiais de proteção só podem aparecer em contexto sensível" };
+  if (hasProtectionUrl && !/recurso oficial|apoyo seguro|servicio local de emergencia|serviço local de emergência/i.test(text)) return { valid: false as const, reason: "O recurso de proteção precisa ser identificado como encaminhamento oficial" };
+  if ((effectiveRisk === "high" || effectiveRisk === "critical") && !hasProtectionUrl) return { valid: false as const, reason: "O texto final exige revisão reforçada por risco" };
+  if (input.containsLink && (!hasAllowedUrl || (!hasProtectionUrl && (effectiveRisk !== "low" || !text.includes(READING_BLOCK_MARKER))))) return { valid: false as const, reason: "O link só pode ser leitura oficial de baixo risco ou recurso de proteção em contexto sensível" };
   if (!input.containsLink && hasAnyUrl) return { valid: false as const, reason: "Este rascunho não pode conter link" };
   if (includesAnyTerm(text, promotionalSignals)) return { valid: false as const, reason: "O texto contém linguagem promocional ou promessa indevida" };
   if (includesAnyTerm(text, unsafeContentTerms)) return { valid: false as const, reason: "O texto contém ódio, abuso ou sexualização indevida" };
@@ -110,16 +119,14 @@ export function sanitizeCommentText(value: string) {
     .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
     .replace(/[\u200B-\u200D\uFEFF]/g, "")
     .replace(/\r\n?/g, "\n")
-    .replace(/\s*[—–]\s*/g, " ")
-    .replace(/\s*;\s*/g, ", ")
-    .replace(/\s+-\s+/g, " ")
+    .replace(/[—–]/g, "-")
     .replace(/[ \t]{2,}/g, " ")
     .trim();
 }
 
-const EDITORIAL_MAX_BODY_CHARS = 800;
-const EDITORIAL_MAX_PARAGRAPHS = 4;
-const EDITORIAL_SENTENCES_PER_PARAGRAPH = 2;
+const EDITORIAL_MAX_BODY_CHARS = 1000;
+const EDITORIAL_MAX_PARAGRAPHS = 3;
+const EDITORIAL_MAX_SENTENCES = 6;
 const READING_BLOCK_MARKER = "LECTURA CORTA";
 
 function clipAtWordBoundary(value: string, maxChars: number) {
@@ -140,10 +147,10 @@ export function formatEditorialText(value: string) {
   const sentences = bodyBlocks.flatMap(block => {
     const matches = block.match(/[^.!?…]+(?:[.!?…]+|$)/g)?.map(sentence => sentence.trim()).filter(Boolean);
     return matches?.length ? matches : [block];
-  });
+  }).slice(0, EDITORIAL_MAX_SENTENCES);
   const paragraphs: string[] = [];
-  for (let index = 0; index < sentences.length && paragraphs.length < EDITORIAL_MAX_PARAGRAPHS; index += EDITORIAL_SENTENCES_PER_PARAGRAPH) {
-    paragraphs.push(sentences.slice(index, index + EDITORIAL_SENTENCES_PER_PARAGRAPH).join(" "));
+  for (let index = 0; index < sentences.length && paragraphs.length < EDITORIAL_MAX_PARAGRAPHS; index += 2) {
+    paragraphs.push(sentences.slice(index, index + 2).join(" "));
   }
 
   const body = clipAtWordBoundary(paragraphs.join("\n\n"), EDITORIAL_MAX_BODY_CHARS);
@@ -221,7 +228,7 @@ function contextualAnchor(input: { videoTitle: string; commentText?: string }, v
   return openings[variant];
 }
 
-export function generateDraft(input: { videoTitle: string; videoTheme: string; commentText?: string; link?: string; responseOnly?: boolean; variationKey?: string }): {
+export function generateDraft(input: { videoTitle: string; videoTheme: string; commentText?: string; link?: string; responseOnly?: boolean; interestShown?: boolean; variationKey?: string }): {
   type: DraftType;
   text: string;
   containsLink: boolean;
@@ -252,7 +259,7 @@ export function generateDraft(input: { videoTitle: string; videoTheme: string; c
     const closing = safeLink ? "Si esta lectura te sirve, puedes acercarte a ella sin tener que explicar nada." : "Puedes quedarte con esa pregunta por ahora, sin tener que resolverla aquí.";
     return {
       type: "B_reply",
-      text: `${contextualAnchor(input, input.variationKey)}. No sé qué hay detrás de esas palabras y no quiero inventarlo.\n\nA veces poner algo en palabras ya cambia la forma de mirarlo. ${closing}${safeLink ? linkText : conversationInvitation(context)}`,
+      text: `${contextualAnchor(input, input.variationKey)}. No sé qué hay detrás de esas palabras y no quiero inventarlo.\n\nA veces poner algo en palabras ya cambia la forma de mirarlo. ${closing}${safeLink ? linkText : input.interestShown ? conversationInvitation(context) : ""}`,
       containsLink: Boolean(safeLink),
       riskLevel: classification.riskLevel,
       justification: safeLink ? "Resposta individual de baixo risco com link permitido e contextual." : "Exposição pessoal: resposta específica sem link.",
@@ -262,7 +269,7 @@ export function generateDraft(input: { videoTitle: string; videoTheme: string; c
   if (type === "B_reply" && input.commentText) {
     return {
       type,
-      text: `${contextualAnchor(input, input.variationKey)}. No sé qué hay detrás de esas palabras y no quiero inventarlo.\n\nA veces poner algo en palabras ya cambia la forma de mirarlo. Puedes quedarte con esa pregunta por ahora, sin tener que resolverla aquí.${conversationInvitation(context)}`,
+      text: `${contextualAnchor(input, input.variationKey)}. No sé qué hay detrás de esas palabras y no quiero inventarlo.\n\nA veces poner algo en palabras ya cambia la forma de mirarlo. Puedes quedarte con esa pregunta por ahora, sin tener que resolverla aquí.${input.interestShown ? conversationInvitation(context) : ""}`,
       containsLink: false,
       riskLevel: classification.riskLevel,
       justification: "Exposição pessoal de baixo risco: resposta específica sem link.",
@@ -279,7 +286,7 @@ export function generateDraft(input: { videoTitle: string; videoTheme: string; c
   const variant = (input.variationKey ?? context).split("").reduce((total, character) => total + character.charCodeAt(0), 0) % humanClosings.length;
   return {
     type,
-      text: `${contextualAnchor(input, input.variationKey)}. ${humanClosings[variant]}${safeLink ? `\n\nHay una lectura corta que puede acompañar esa reflexión. Si te sirve, puedes verla y volver cuando quieras.${linkText}` : conversationInvitation(context)}`,
+      text: `${contextualAnchor(input, input.variationKey)}. ${humanClosings[variant]}${safeLink ? `\n\nHay una lectura corta que puede acompañar esa reflexión. Si te sirve, puedes verla y volver cuando quieras.${linkText}` : input.interestShown ? conversationInvitation(context) : ""}`,
     containsLink: Boolean(safeLink),
     riskLevel: classification.riskLevel,
     justification: safeLink ? "Link permitido apenas como exceção e após revisão humana." : "Acolhimento contextual sem link.",

@@ -13,7 +13,7 @@
 - [x] 23 tabelas criadas no schema `public`.
 - [x] RLS habilitado nas 23 tabelas, sem políticas públicas.
 - [x] `pnpm check` aprovado.
-- [x] `pnpm test` aprovado: 124 testes passaram, 1 foi pulado por ausência de credenciais reais.
+- [x] `pnpm test` aprovado: 131 testes passaram, 1 foi pulado por ausência de credenciais reais.
 - [x] `pnpm build` aprovado.
 - [x] Aprovação humana permanece obrigatória; o agente não expõe mais a opção de autopublicação.
 - [x] Chave RelayModels cadastrada no cofre de produção; o valor inválido `gpt-4o-mini` foi substituído por `gpt-5.6-sol` após o erro `model_not_found`.
@@ -21,6 +21,8 @@
 - [x] Fallback defensivo adicionado: valores `sk-...` em `EXTERNAL_LLM_MODEL` nunca são enviados ao RelayModels como modelo.
 - [x] Auditoria multicanal continuada: custódia de conexão por `projectChannelId`, bloqueio de reativação de canais pausados/revogados, deduplicação de drafts por canal e validação de canal na regeneração.
 - [x] Guia sanitizado de até cinco canais criado em `docs/GUIA-CONEXAO-5-CANAIS-YOUTUBE-v1.md`.
+- [x] Política operacional v2 aplicada: limite diário por canal, cooldown contextual por vídeo/thread, taxonomia ampliável, escrita flexível e convites apenas com interesse explícito.
+- [x] Propostas automáticas de aprendizado permanecem pendentes e não entram no contexto antes de aprovação humana.
 - [x] Runtime publicado após a configuração RelayModels e healthcheck confirmado com `200`.
 - [x] Auditoria somente leitura do Supabase `PROJETO CADENA YOUTUBE`: projeto ativo/saudável, PostgreSQL 17, cinco migrations registradas, 23 tabelas com RLS e zero políticas públicas.
 - [x] Escopo `projectChannelId` confirmado em `automationSettings`, `drafts`, `publicationOutbox`, `publications` e `youtubeConnections`.

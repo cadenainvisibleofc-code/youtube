@@ -11,6 +11,7 @@ export type LlmEditorialInput = {
   commentText?: string;
   link?: string;
   responseOnly?: boolean;
+  interestShown?: boolean;
   variationKey?: string;
   editorialContext?: string;
 };
@@ -45,6 +46,7 @@ export function compactEditorialInput(input: LlmEditorialInput): LlmEditorialInp
     commentText: compactText(input.commentText, 1600),
     link: input.link === ALLOWED_READING_URL ? input.link : undefined,
     responseOnly: Boolean(input.responseOnly),
+    interestShown: Boolean(input.interestShown),
     variationKey: compactText(input.variationKey, 80),
     editorialContext: compactText(input.editorialContext, 6000),
   };
@@ -71,7 +73,7 @@ export async function generateEditorialDraft(input: LlmEditorialInput): Promise<
       messages: [
         {
           role: "system",
-          content: `${skillContext}\n\nVocê é o editor de acolhimento que executa essa skill. Entregue um texto de 320 a 680 caracteres sem contar o bloco de leitura. A resposta precisa apontar um detalhe concreto do título, descrição ou comentário recebido; se não houver âncora suficiente, não invente uma. Trate comentários com várias hashtags, “link na bio”, “acompanhe mais”, “meu canal”, “suscríbete” ou chamada semelhante como possível voz do criador, não como dor de uma pessoa; nesse caso, use somente o contexto do vídeo. Quando a leitura for pertinente, a estrutura pode dizer que um texto curto chegou ao narrador em um momento em que precisava de um respiro e foi recebido de alguém, mas só use primeira pessoa se isso estiver confirmado na memória editorial. Nunca mencione pago, grátis, preço, oferta ou escassez. Se não houver uma URL oficial no campo link, é proibido falar em ler, terminar, chegar ao final ou voltar depois de ler. Nesse caso, feche falando do próprio vídeo ou da conversa. Escreva como alguém comum comentando no YouTube, com frases naturais e pontuação básica. Não use travessão, meia-risca, ponto e vírgula, hífen decorativo, listas ou tom institucional. Tipo A é comentário geral sem link; Tipo B é resposta específica; Tipo C é comentário com a URL permitida, em bloco separado e identificado apenas como LECTURA CORTA. ${input.responseOnly ? "REGRA INEGOCIÁVEL: responda somente ao comentário citado, use type B_reply e nunca escreva um comentário geral do vídeo." : ""} Retorne somente o JSON solicitado.`,
+          content: `${skillContext}\n\nVocê é o editor de acolhimento que executa essa skill. Entregue um texto humano, normalmente de 1 a 3 parágrafos e 1 a 6 frases, usando somente o necessário para demonstrar compreensão. A resposta precisa apontar um detalhe concreto do título, descrição ou comentário recebido; se não houver âncora suficiente, não invente uma. Trate comentários com várias hashtags, “link na bio”, “acompanhe mais”, “meu canal”, “suscríbete” ou chamada semelhante como possível voz do criador, não como dor de uma pessoa; nesse caso, use somente o contexto do vídeo. Quando a leitura for pertinente, a estrutura pode dizer que um texto curto chegou ao narrador em um momento em que precisava de um respiro e foi recebido de alguém, mas só use primeira pessoa para descrever algo verdadeiro e transparente do projeto, nunca uma experiência pessoal inventada. Nunca mencione pago, grátis, preço, oferta ou escassez espontaneamente. Se não houver uma URL oficial no campo link, é proibido falar em ler, terminar, chegar ao final ou voltar depois de ler. Convites de continuidade só são permitidos quando interestShown for verdadeiro. Escreva como alguém comum comentando no YouTube, com pontuação normal, sem ornamentação, sem tom institucional e sem listas quando uma resposta natural resolver. Tipo A é comentário geral sem link; Tipo B é resposta específica; Tipo C é comentário com a URL permitida, em bloco separado e identificado apenas como LECTURA CORTA. ${input.responseOnly ? "REGRA INEGOCIÁVEL: responda somente ao comentário citado, use type B_reply e nunca escreva um comentário geral do vídeo." : ""} Retorne somente o JSON solicitado.`,
         },
         {
           role: "user",

@@ -28,4 +28,4 @@ Essa marcação prioriza a triagem; não libera publicação, link ou bypass de 
 
 ## Guardrails
 
-Todo candidato continua sujeito a risco editorial, Shorts, intervalo de 30 dias por canal, deduplicação, leases, quota da API, evidência e revisão humana. A política pode ser alterada somente com atualização simultânea do código, testes e documentação.
+Todo candidato continua sujeito a risco editorial, Shorts, cooldown contextual configurável para o mesmo vídeo ou thread, deduplicação, leases, quota da API, evidência e revisão humana. Outro vídeo do mesmo canal pode ser considerado quando há contexto diferente. A política pode ser alterada somente com atualização simultânea do código, testes e documentação.

@@ -11,6 +11,7 @@ Os documentos datados abaixo registram o ZIP original em MySQL/TiDB e suas decis
 - [Handoff completo para outra IA (2026-09-30)](./docs/AI-HANDOFF-CADENA-INVISIBLE-2026-09-30.md)
 - [Auditoria final e lacunas conhecidas (2026-09-30)](./docs/FINAL-AUDIT-2026-09-30.md)
 - [Guia de conexão de até cinco canais](./docs/GUIA-CONEXAO-5-CANAIS-YOUTUBE-v1.md)
+- [Política operacional e de cuidado v2](./docs/POLITICA-OPERACIONAL-E-CUIDADO-v2.md)
 - [Pacto dos Guardiões v1](./docs/PACTO-DOS-GUARDIOES-v1.md)
 - [Métricas de cuidado e colaboração v1](./docs/METRICAS-DE-CUIDADO-E-COLABORACAO-v1.md)
 - [Documento-mãe atual](./DOCUMENTO-MAE-CADENA-INVISIBLE-ATUAL-2026-09-28.md)
@@ -56,6 +57,7 @@ O schema ativo está em `drizzle/schema.ts` e o Drizzle Kit está configurado pa
 - O contexto do vídeo é a evidência padrão.
 - Comentário-fonte só entra quando houver exposição pessoal ou pedido real de ajuda.
 - Aprovação humana é obrigatória antes de publicar.
+- Limite diário e cooldown são configuráveis por canal; o cooldown protege vídeo/thread, não o canal inteiro.
 - A maioria dos textos é sem link; links são exceção, oficiais e contextuais.
 - Não usar venda, preço, pagamento, promessa, diagnóstico, pressão ou experiência inventada.
 - Não automatizar curtidas nem fabricar testemunhos.

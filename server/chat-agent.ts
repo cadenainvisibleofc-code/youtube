@@ -64,7 +64,7 @@ const tools: Tool[] = [
       description: "Busca vídeos por consultas específicas e prepara até 10 rascunhos de canais distintos na fila de revisão. Esta ferramenta nunca publica.",
       parameters: {
         type: "object",
-        properties: { queries: { type: "array", items: { type: "string", minLength: 2, maxLength: 120 }, maxItems: 10 }, maxDrafts: { type: "integer", minimum: 1, maximum: 10 } },
+        properties: { queries: { type: "array", items: { type: "string", minLength: 2, maxLength: 120 }, maxItems: 10 }, maxDrafts: { type: "integer", minimum: 1, maximum: 150 } },
         required: ["queries"],
         additionalProperties: false,
       },
@@ -98,7 +98,7 @@ const tools: Tool[] = [
     type: "function",
     function: {
       name: "get_automation_settings",
-      description: "Consulta as consultas, link, intervalo por canal e estado da automação.",
+    description: "Consulta as consultas, limite diário, link, cooldown contextual por canal e estado da automação.",
       parameters: { type: "object", properties: {}, additionalProperties: false },
     },
   },
@@ -111,7 +111,8 @@ const tools: Tool[] = [
         type: "object",
         properties: {
           enabled: { type: "boolean" },
-          minChannelIntervalDays: { type: "integer", minimum: 30, maximum: 365 },
+          dailyLimit: { type: "integer", minimum: 1, maximum: 150 },
+          minChannelIntervalDays: { type: "integer", minimum: 0, maximum: 365 },
           includeLink: { type: "boolean" },
           searchQueries: { type: "array", items: { type: "string", minLength: 2, maxLength: 120 }, maxItems: 10 },
         },
@@ -125,6 +126,19 @@ const tools: Tool[] = [
       name: "list_editorial_memory",
       description: "Mostra o núcleo fundador e os aprendizados editoriais aprovados ou aguardando revisão. Não altera memória.",
       parameters: { type: "object", properties: { includeInactive: { type: "boolean" } }, additionalProperties: false },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "suggest_editorial_learning",
+      description: "Sugere um aprendizado quando identifica um padrão consistente. A sugestão fica pendente e nunca altera prompts, princípios ou limites.",
+      parameters: {
+        type: "object",
+        properties: { title: { type: "string", minLength: 4, maxLength: 180 }, content: { type: "string", minLength: 12, maxLength: 1200 }, category: { type: "string", maxLength: 80 } },
+        required: ["title", "content"],
+        additionalProperties: false,
+      },
     },
   },
   {
@@ -279,7 +293,7 @@ async function executeTool(name: string, args: Record<string, unknown>, ownerOpe
     return { query, count: candidates.length, videos: candidates.map(candidate => ({ videoId: candidate.videoId, title: candidate.title, channelName: candidate.channelName, views: candidate.viewCount, comments: candidate.commentCount, ageDays: candidate.eligibility.ageDays, eligible: candidate.eligibility.eligible, emergingOpportunity: candidate.eligibility.emergingOpportunity, opportunityScore: candidate.eligibility.opportunityScore, reasons: candidate.eligibility.reasons, url: candidate.url })) };
   }
   if (name === "run_controlled_automation") return runAutomation({ ownerOpenId, ownerId });
-  if (name === "prepare_daily_batch") return runAutomation({ ownerOpenId, ownerId, force: true, maxDrafts: 10, autoPublishOverride: false });
+  if (name === "prepare_daily_batch") return runAutomation({ ownerOpenId, ownerId, force: true, autoPublishOverride: false });
   if (name === "prepare_review_drafts") {
     const queries = Array.isArray(args.queries) ? args.queries.filter((query): query is string => typeof query === "string").map(query => query.trim()).filter(query => query.length >= 2 && query.length <= 120).slice(0, 10) : [];
     if (!queries.length) throw new Error("Informe pelo menos uma busca");
@@ -292,7 +306,7 @@ async function executeTool(name: string, args: Record<string, unknown>, ownerOpe
   }
   if (name === "get_automation_settings") return getAutomationSettings(ownerOpenId);
   if (name === "update_automation_settings") {
-    const allowed = ["enabled", "minChannelIntervalDays", "includeLink", "searchQueries"] as const;
+    const allowed = ["enabled", "dailyLimit", "minChannelIntervalDays", "includeLink", "searchQueries"] as const;
     const input: Record<string, unknown> = {};
     for (const key of allowed) if (args[key] !== undefined) input[key] = args[key];
     return updateAutomationSettings(ownerOpenId, input as Parameters<typeof updateAutomationSettings>[1]);
@@ -300,6 +314,11 @@ async function executeTool(name: string, args: Record<string, unknown>, ownerOpe
   if (name === "list_editorial_memory") {
     const memories = await listEditorialMemories(ownerOpenId, args.includeInactive === true);
     return { count: memories.length, memories: memories.map(memory => ({ id: memory.id, category: memory.category, title: memory.title, content: memory.content, status: memory.status, locked: Boolean(memory.locked), confidence: memory.confidence, source: memory.source })) };
+  }
+  if (name === "suggest_editorial_learning") {
+    const title = typeof args.title === "string" ? args.title : "";
+    const content = typeof args.content === "string" ? args.content : "";
+    return proposeEditorialMemory({ ownerOpenId, ownerId, title, content, category: typeof args.category === "string" ? args.category : "automatic_suggestion", source: "automatic_suggestion" });
   }
   if (name === "propose_editorial_learning") {
     if (!allowMemoryProposal) throw new Error("Só posso propor um aprendizado quando você pedir explicitamente para registrar ou memorizar isso");

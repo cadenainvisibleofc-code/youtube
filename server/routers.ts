@@ -83,7 +83,8 @@ export const appRouter = router({
       .input(z.object({
         enabled: z.boolean().optional(),
         autoPublish: z.boolean().optional(),
-        minChannelIntervalDays: z.number().int().min(30).max(365).optional(),
+        dailyLimit: z.number().int().min(1).max(150).optional(),
+        minChannelIntervalDays: z.number().int().min(0).max(365).optional(),
         includeLink: z.boolean().optional(),
         searchQueries: z.array(z.string().min(2).max(120)).max(10).optional(),
         projectChannelId: z.number().int().positive().optional(),
@@ -92,9 +93,9 @@ export const appRouter = router({
     runAutomation: protectedProcedure.input(z.object({ projectChannelId: z.number().int().positive().optional() }).optional()).mutation(({ ctx, input }) => runAutomation({ ownerOpenId: ctx.user.openId, ownerId: ctx.user.id, projectChannelId: input?.projectChannelId })),
     discoverWeekly: protectedProcedure.input(z.object({ projectChannelId: z.number().int().positive().optional() }).optional()).mutation(({ ctx, input }) => discoverWeeklyVideos(ctx.user.openId, input?.projectChannelId)),
     prepareSavedWeekly: protectedProcedure
-      .input(z.object({ limit: z.number().int().min(1).max(30).optional(), projectChannelId: z.number().int().positive().optional() }).optional())
+      .input(z.object({ limit: z.number().int().min(1).max(150).optional(), projectChannelId: z.number().int().positive().optional() }).optional())
       .mutation(({ ctx, input }) => prepareSavedWeeklyBatch({ ownerOpenId: ctx.user.openId, ownerId: ctx.user.id, projectChannelId: input?.projectChannelId, maxDrafts: input?.limit ?? 30 })),
-    prepareDailyBatch: protectedProcedure.input(z.object({ projectChannelId: z.number().int().positive().optional() }).optional()).mutation(({ ctx, input }) => runAutomation({ ownerOpenId: ctx.user.openId, ownerId: ctx.user.id, projectChannelId: input?.projectChannelId, force: true, maxDrafts: 30, autoPublishOverride: false })),
+    prepareDailyBatch: protectedProcedure.input(z.object({ projectChannelId: z.number().int().positive().optional() }).optional()).mutation(({ ctx, input }) => runAutomation({ ownerOpenId: ctx.user.openId, ownerId: ctx.user.id, projectChannelId: input?.projectChannelId, force: true, maxDrafts: 150, autoPublishOverride: false })),
     regenerateHumanized: protectedProcedure
       .input(z.object({ limit: z.number().int().min(1).max(25).optional(), projectChannelId: z.number().int().positive().optional() }).optional())
       .mutation(({ ctx, input }) => regenerateHumanizedDrafts(ctx.user.openId, ctx.user.id, input?.limit ?? 25, input?.projectChannelId)),

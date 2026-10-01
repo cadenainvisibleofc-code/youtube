@@ -139,9 +139,31 @@ describe("generateDraft", () => {
     expect(formatted).toContain("LECTURA CORTA");
   });
 
-  it("keeps ordinary comments free of formal decorative punctuation", () => {
+  it("preserves normal punctuation while removing decorative dash variants", () => {
     const text = sanitizeCommentText("Una frase — con una pausa; y un cierre - sencillo.");
-    expect(text).toBe("Una frase con una pausa, y un cierre sencillo.");
-    expect(text).not.toMatch(/[—–;]/);
+    expect(text).toBe("Una frase - con una pausa; y un cierre - sencillo.");
+    expect(text).not.toMatch(/[—–]/);
+  });
+
+  it("does not add a continuity invitation to a general video comment", () => {
+    const draft = generateDraft({ videoTitle: "Calma", videoTheme: "la calma cotidiana" });
+    expect(draft.text).not.toMatch(/vuelve|cuéntame|contar/i);
+  });
+
+  it("allows an optional invitation after explicit interest", () => {
+    const draft = generateDraft({ videoTitle: "Calma", videoTheme: "la calma cotidiana", commentText: "¿Cómo encontraste calma?", responseOnly: true, interestShown: true });
+    expect(draft.text).toMatch(/vuelve|cuéntame|contar/i);
+  });
+
+  it("allows only an explicitly configured official protection resource in crisis", () => {
+    const previous = process.env.OFFICIAL_PROTECTION_URLS;
+    process.env.OFFICIAL_PROTECTION_URLS = "https://example.org/help";
+    try {
+      expect(validateFinalDraft({ text: "Si hay riesgo inmediato, busca apoyo seguro en un recurso oficial: https://example.org/help", riskLevel: "critical", containsLink: true }).valid).toBe(true);
+      expect(validateFinalDraft({ text: "Una reflexión cotidiana: https://example.org/help", riskLevel: "low", containsLink: true }).valid).toBe(false);
+    } finally {
+      if (previous === undefined) delete process.env.OFFICIAL_PROTECTION_URLS;
+      else process.env.OFFICIAL_PROTECTION_URLS = previous;
+    }
   });
 });

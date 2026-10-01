@@ -9,8 +9,8 @@ import { detectContentLanguage, evaluateEligibility } from "./ingestion";
 import { getVideoDetails, listTopComments, searchRecentVideos, YouTubeApiError, type YouTubeCandidate } from "./youtube";
 import { automationDedupeKey } from "./automation-channel-policy";
 
-const DEFAULT_QUERIES = ["soledad propósito vida", "ansiedad esperanza proceso", "fe sentido experiencias", "cómo seguir cuando cuesta", "historias de cambio interior"];
-const MIN_CHANNEL_INTERVAL_DAYS = 30;
+const DEFAULT_QUERIES = ["soledad propósito vida", "ansiedad esperanza proceso", "fe sentido experiencias", "cómo seguir cuando cuesta", "historias de cambio interior", "recomenzar y pertenencia", "duelo y reconciliación", "cansancio y esperanza práctica", "búsqueda espiritual y sentido", "cambio de vida y madurez"];
+const DEFAULT_DAILY_LIMIT = 30;
 
 function expandSearchQueries(queries: string[]) {
   const suffixes = ["experiencia", "historia", "reflexión", "cómo seguir", "qué hacer"];
@@ -81,8 +81,8 @@ function normalizeSettings(row: AutomationSettingsRow): AutomationSettings {
   return {
     enabled: Boolean(row.enabled),
     autoPublish: Boolean(row.autoPublish),
-    dailyLimit: Math.max(1, Math.min(100, row.dailyLimit)),
-    minChannelIntervalDays: Math.max(MIN_CHANNEL_INTERVAL_DAYS, row.minChannelIntervalDays),
+    dailyLimit: Math.max(1, Math.min(150, row.dailyLimit || DEFAULT_DAILY_LIMIT)),
+    minChannelIntervalDays: Math.max(0, Math.min(365, row.minChannelIntervalDays ?? 30)),
     includeLink: Boolean(row.includeLink),
     searchQueries: queries.length ? queries : DEFAULT_QUERIES,
     scheduleCronTaskUid: row.scheduleCronTaskUid,
@@ -177,7 +177,7 @@ async function loadSavedCandidatePool(ownerId: number, projectChannelId: number 
 
 export async function updateAutomationSettings(
   ownerOpenId: string,
-  input: Partial<Pick<AutomationSettings, "enabled" | "autoPublish" | "minChannelIntervalDays" | "includeLink" | "searchQueries">>,
+  input: Partial<Pick<AutomationSettings, "enabled" | "autoPublish" | "dailyLimit" | "minChannelIntervalDays" | "includeLink" | "searchQueries">>,
   projectChannelId?: number,
 ) {
   const database = await requireDatabase();
@@ -187,7 +187,8 @@ export async function updateAutomationSettings(
     ...(input.enabled === undefined ? {} : { enabled: input.enabled ? 1 : 0 }),
     // Publicação externa permanece desligada no MVP; aprovação humana é obrigatória.
     autoPublish: 0,
-    ...(input.minChannelIntervalDays === undefined ? {} : { minChannelIntervalDays: Math.max(MIN_CHANNEL_INTERVAL_DAYS, input.minChannelIntervalDays) }),
+    ...(input.dailyLimit === undefined ? {} : { dailyLimit: Math.max(1, Math.min(150, Math.round(input.dailyLimit))) }),
+    ...(input.minChannelIntervalDays === undefined ? {} : { minChannelIntervalDays: Math.max(0, Math.min(365, Math.round(input.minChannelIntervalDays))) }),
     ...(input.includeLink === undefined ? {} : { includeLink: input.includeLink ? 1 : 0 }),
     ...(queries === undefined ? {} : { searchQueries: queries.join("\n") }),
     updatedAt: new Date(),
@@ -238,12 +239,12 @@ export async function getAutomationSettingsByTaskUid(taskUid: string) {
   return { ownerOpenId: rows[0].ownerOpenId, projectChannelId: rows[0].projectChannelId ?? undefined, settings: normalizeSettings(rows[0]) };
 }
 
-async function hasRecentChannelInteraction(ownerId: number, channelId: string, since: Date, projectChannelId?: number) {
+async function hasRecentContextualInteraction(ownerId: number, youtubeVideoId: string, parentCommentId: string | undefined, since: Date, projectChannelId?: number) {
   const database = await requireDatabase();
   const rows = await database.select({ id: drafts.id })
     .from(drafts)
     .innerJoin(videos, eq(drafts.videoId, videos.id))
-    .where(and(eq(drafts.createdBy, ownerId), projectChannelId === undefined ? isNull(drafts.projectChannelId) : eq(drafts.projectChannelId, projectChannelId), eq(videos.channelId, channelId), gte(drafts.createdAt, since), ne(drafts.status, "discarded")))
+    .where(and(eq(drafts.createdBy, ownerId), projectChannelId === undefined ? isNull(drafts.projectChannelId) : eq(drafts.projectChannelId, projectChannelId), or(eq(videos.youtubeVideoId, youtubeVideoId), parentCommentId ? eq(drafts.parentCommentId, parentCommentId) : undefined), gte(drafts.createdAt, since), ne(drafts.status, "discarded")))
     .limit(1);
   return rows.length > 0;
 }
@@ -362,7 +363,7 @@ async function runAutomationUnlocked(input: RunAutomationInput): Promise<Automat
 
   const now = new Date();
   const result: AutomationRunResult = { searched: 0, considered: 0, drafted: 0, published: 0, heldForReview: 0, blocked: 0, skipped: 0, reasons: [] };
-  const requestedDraftLimit = input.maxDrafts ? Math.max(1, Math.min(30, input.maxDrafts)) : null;
+  const requestedDraftLimit = input.maxDrafts ? Math.max(1, Math.min(150, input.maxDrafts)) : null;
   const dailyRemaining = Math.max(0, settings.dailyLimit - await countDraftsToday(input.ownerId, now, input.projectChannelId));
   let remaining = Math.min(requestedDraftLimit ?? settings.dailyLimit, dailyRemaining);
   let linkDrafts = 0;
@@ -409,12 +410,6 @@ async function runAutomationUnlocked(input: RunAutomationInput): Promise<Automat
       result.reasons.push(`outro vídeo do mesmo canal já foi selecionado nesta rodada: ${candidate.title}`);
       continue;
     }
-    if (await hasRecentChannelInteraction(input.ownerId, candidate.channelId, since, input.projectChannelId) || await hasExistingDraft(input.ownerId, candidate.videoId, input.projectChannelId)) {
-      result.skipped++;
-      result.reasons.push(`já processado ou canal em intervalo: ${candidate.title}`);
-      continue;
-    }
-
     let comments;
     try {
       comments = await listTopComments(candidate.videoId, 10);
@@ -428,6 +423,11 @@ async function runAutomationUnlocked(input: RunAutomationInput): Promise<Automat
     }
     const personalComments = comments.filter(comment => isMeaningfulPersonalComment(comment.text));
     const selectedComment = personalComments.find(comment => classifyRisk(comment.text).riskLevel === "medium") ?? personalComments.find(comment => classifyRisk(comment.text).riskLevel !== "critical");
+    if (await hasRecentContextualInteraction(input.ownerId, candidate.videoId, selectedComment?.commentId, since, input.projectChannelId) || await hasExistingDraft(input.ownerId, candidate.videoId, input.projectChannelId)) {
+      result.skipped++;
+      result.reasons.push(`já processado ou mesma conversa em cooldown contextual: ${candidate.title}`);
+      continue;
+    }
     const isReplyMode = Boolean(selectedComment && candidate.isShort);
     const combinedTheme = `${candidate.title}. ${candidate.description.slice(0, 1200)}`;
     const riskSignals = classifyRisk(`${combinedTheme} ${selectedComment?.text ?? ""}`);
@@ -444,6 +444,7 @@ async function runAutomationUnlocked(input: RunAutomationInput): Promise<Automat
       videoTitle: candidate.title,
       videoTheme: combinedTheme,
       commentText: isReplyMode ? selectedComment?.text : undefined,
+      interestShown: Boolean(selectedComment),
       link: settings.includeLink && linkQuotaOpen && linkIsDue && riskSignals.riskLevel === "low" ? ALLOWED_READING_URL : undefined,
       responseOnly: isReplyMode,
       variationKey: `${now.toISOString().slice(0, 10)}-${result.considered}-${candidate.videoId}`,
