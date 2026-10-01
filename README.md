@@ -24,6 +24,8 @@ Os documentos datados abaixo registram o ZIP original em MySQL/TiDB e suas decis
 - [Plano de custódia e recuperação](./docs/PLANO-CUSTODIA-E-RECUPERACAO-2026-10-01.md)
 - [Manifest de migrations Supabase](./docs/SUPABASE-MIGRATION-MANIFEST-2026-10-01.md)
 - [Estratégia de ressonância da comunidade](./docs/ESTRATEGIA-RESSONANCIA-DA-COMUNIDADE-v1.md)
+- [Leia primeiro — índice do Drive](./docs/DRIVE-LEIA-PRIMEIRO-2026-10-01.md)
+- [Registro da limpeza de código](./docs/CODE-CLEANUP-2026-10-01.md)
 
 ## Stack
 
