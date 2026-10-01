@@ -33,7 +33,7 @@ export function GuardianMissionPanel() {
     },
     onError: error => toast.error(error.message),
   });
-  const channels = (integrations.data?.youtube.channels ?? []).filter(channel => channel.canManage && !["paused", "revoked"].includes(channel.status));
+  const channels = (integrations.data?.youtube.channels ?? []).filter(channel => channel.canManage && channel.status === "connected");
   const toggleChannel = (id: number) => setSelectedChannels(current => current.includes(id) ? current.filter(value => value !== id) : current.length >= 5 ? current : [...current, id]);
 
   return <Card className="border-0 bg-white shadow-[0_14px_45px_rgba(45,70,60,0.08)]">

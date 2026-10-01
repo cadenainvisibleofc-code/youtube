@@ -10,6 +10,7 @@ import {
   drafts,
   guardianAssignments,
   guardianMissions,
+  editorialFeedback,
   publicationOutbox,
   projectChannels,
   projects,
@@ -67,7 +68,7 @@ export async function prepareGuardianMission(input: PrepareGuardianMissionInput)
 
   const channels = await getProjectChannelsForOwner(input.ownerOpenId);
   const selectedChannels = ids.map(id => channels.find(channel => channel.id === id));
-  if (selectedChannels.some(channel => !channel || !["connected", "pending"].includes(channel.status))) throw new Error("Todos os canais escolhidos precisam pertencer ao projeto e estar disponíveis");
+  if (selectedChannels.some(channel => !channel || channel.status !== "connected")) throw new Error("Todos os canais escolhidos precisam estar conectados antes de criar a missão");
   if (new Set(selectedChannels.map(channel => channel?.projectId)).size !== 1) throw new Error("Os guardiões sincronizados precisam pertencer ao mesmo projeto");
 
   const sourceText = input.sourceCommentText?.trim() || "";
@@ -183,6 +184,14 @@ export async function approveGuardianMission(ownerId: number, missionId: number)
     for (const row of rows) {
       await transaction.update(drafts).set({ status: "approved", updatedAt: new Date() }).where(and(eq(drafts.id, row.draft.id), eq(drafts.status, row.draft.status)));
       await transaction.update(guardianAssignments).set({ status: "approved", updatedAt: new Date() }).where(eq(guardianAssignments.id, row.assignment.id));
+      await transaction.insert(editorialFeedback).values({
+        draftId: row.draft.id,
+        ownerId,
+        outcome: "approved",
+        originalText: row.draft.text,
+        finalText: row.draft.text,
+        changeSummary: JSON.stringify({ missionId, assignmentId: row.assignment.id, jointApproval: true, role: row.assignment.role }),
+      });
       await transaction.insert(publicationOutbox).values({ draftId: row.draft.id, ownerOpenId: owner.openId, projectChannelId: row.assignment.projectChannelId, idempotencyKey: `draft:${row.draft.id}:approved`, status: "pending" }).onConflictDoUpdate({ target: publicationOutbox.draftId, set: { projectChannelId: row.assignment.projectChannelId, updatedAt: new Date(), lastError: null } });
     }
     await transaction.update(guardianMissions).set({ status: "approved", updatedAt: new Date() }).where(eq(guardianMissions.id, missionId));
