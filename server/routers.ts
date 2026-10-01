@@ -95,7 +95,7 @@ export const appRouter = router({
     prepareDailyBatch: protectedProcedure.input(z.object({ projectChannelId: z.number().int().positive().optional() }).optional()).mutation(({ ctx, input }) => runAutomation({ ownerOpenId: ctx.user.openId, ownerId: ctx.user.id, projectChannelId: input?.projectChannelId, force: true, maxDrafts: 30, autoPublishOverride: false })),
     regenerateHumanized: protectedProcedure
       .input(z.object({ limit: z.number().int().min(1).max(25).optional(), projectChannelId: z.number().int().positive().optional() }).optional())
-      .mutation(({ ctx, input }) => regenerateHumanizedDrafts(ctx.user.id, input?.limit ?? 25, input?.projectChannelId)),
+      .mutation(({ ctx, input }) => regenerateHumanizedDrafts(ctx.user.openId, ctx.user.id, input?.limit ?? 25, input?.projectChannelId)),
     publishApproved: protectedProcedure
       .input(z.object({ limit: z.number().int().min(1).max(30).optional(), projectChannelId: z.number().int().positive().optional() }).optional())
       .mutation(({ ctx, input }) => processPublicationOutbox(ctx.user.openId, input?.limit ?? 30, input?.projectChannelId)),

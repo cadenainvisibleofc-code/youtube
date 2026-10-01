@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ChannelSelectionError, resolveChannelConnection, type ChannelConnectionCandidate } from "./channel-selection";
+import { canReuseOAuthSlot, ChannelSelectionError, isProjectChannelSelectable, resolveChannelConnection, type ChannelConnectionCandidate } from "./channel-selection";
 
 const channelA: ChannelConnectionCandidate = { id: 1, channelId: "channel-a", channelName: "Canal A", status: "connected" };
 const channelB: ChannelConnectionCandidate = { id: 2, channelId: "channel-b", channelName: "Canal B", status: "connected" };
@@ -23,5 +23,16 @@ describe("resolveChannelConnection", () => {
 
   it("ignores reauthorization-required connections", () => {
     expect(() => resolveChannelConnection([{ ...channelA, status: "reauthorization_required" }])).toThrow(/Nenhum canal conectado/);
+  });
+});
+
+describe("project channel lifecycle", () => {
+  it("does not select or reauthorize paused and revoked channels", () => {
+    expect(isProjectChannelSelectable("connected")).toBe(true);
+    expect(isProjectChannelSelectable("reauthorization_required")).toBe(true);
+    expect(isProjectChannelSelectable("paused")).toBe(false);
+    expect(isProjectChannelSelectable("revoked")).toBe(false);
+    expect(canReuseOAuthSlot("paused")).toBe(false);
+    expect(canReuseOAuthSlot("revoked")).toBe(false);
   });
 });

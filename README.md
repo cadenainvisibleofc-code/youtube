@@ -10,6 +10,7 @@ Os documentos datados abaixo registram o ZIP original em MySQL/TiDB e suas decis
 
 - [Handoff completo para outra IA (2026-09-30)](./docs/AI-HANDOFF-CADENA-INVISIBLE-2026-09-30.md)
 - [Auditoria final e lacunas conhecidas (2026-09-30)](./docs/FINAL-AUDIT-2026-09-30.md)
+- [Guia de conexão de até cinco canais](./docs/GUIA-CONEXAO-5-CANAIS-YOUTUBE-v1.md)
 - [Pacto dos Guardiões v1](./docs/PACTO-DOS-GUARDIOES-v1.md)
 - [Métricas de cuidado e colaboração v1](./docs/METRICAS-DE-CUIDADO-E-COLABORACAO-v1.md)
 - [Documento-mãe atual](./DOCUMENTO-MAE-CADENA-INVISIBLE-ATUAL-2026-09-28.md)

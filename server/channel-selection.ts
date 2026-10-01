@@ -12,6 +12,16 @@ export class ChannelSelectionError extends Error {
   }
 }
 
+export type ProjectChannelStatus = "pending" | "connected" | "reauthorization_required" | "paused" | "revoked";
+
+export function isProjectChannelSelectable(status: ProjectChannelStatus) {
+  return status !== "paused" && status !== "revoked";
+}
+
+export function canReuseOAuthSlot(status: ProjectChannelStatus) {
+  return isProjectChannelSelectable(status);
+}
+
 /**
  * Resolve a connection only when the requested channel is unambiguous.
  * This helper is intentionally pure so it can be adopted by OAuth, publisher

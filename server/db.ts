@@ -6,6 +6,7 @@ import { canApproveDraft, generateDraft, isMeaningfulPersonalComment, validateFi
 import { evaluateEligibility, extractYouTubeVideoId } from "./ingestion";
 import { getEditorialContext } from "./editorial-memory";
 import { generateEditorialDraft } from "./llm-editorial";
+import { canReuseOAuthSlot } from "./channel-selection";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -295,7 +296,7 @@ export async function getProjectChannelByYouTubeChannelForOwner(ownerOpenId: str
   const rows = await database.select({ id: projectChannels.id, projectId: projectChannels.projectId, channelId: projectChannels.channelId, channelName: projectChannels.channelName, status: projectChannels.status, minInteractionIntervalDays: projectChannels.minInteractionIntervalDays }).from(projectChannels)
     .innerJoin(projectMembers, eq(projectMembers.projectId, projectChannels.projectId))
     .innerJoin(projects, eq(projects.id, projectChannels.projectId))
-    .where(and(eq(projectChannels.projectId, projectId), eq(projectChannels.channelId, channelId), eq(projectMembers.openId, ownerOpenId), eq(projectMembers.status, "active"), or(eq(projectMembers.role, "owner"), eq(projectMembers.role, "editor")), eq(projects.status, "active")))
+    .where(and(eq(projectChannels.projectId, projectId), eq(projectChannels.channelId, channelId), eq(projectMembers.openId, ownerOpenId), eq(projectMembers.status, "active"), or(eq(projectMembers.role, "owner"), eq(projectMembers.role, "editor")), eq(projects.status, "active"), ne(projectChannels.status, "paused"), ne(projectChannels.status, "revoked")))
     .limit(1);
   return rows[0];
 }
@@ -312,7 +313,10 @@ export async function createProjectChannelForOwner(input: { ownerOpenId: string;
     await transaction.execute(sql`SELECT id FROM projects WHERE id = ${project.id} FOR UPDATE`);
     const existing = await transaction.select({ id: projectChannels.id, projectId: projectChannels.projectId, channelId: projectChannels.channelId, channelName: projectChannels.channelName, status: projectChannels.status, minInteractionIntervalDays: projectChannels.minInteractionIntervalDays }).from(projectChannels)
       .where(and(eq(projectChannels.projectId, project.id), eq(projectChannels.channelId, input.channelId))).limit(1);
-    if (existing[0]) return existing[0];
+    if (existing[0]) {
+      if (!canReuseOAuthSlot(existing[0].status)) throw new Error("Canal pausado ou revogado não pode ser reconectado");
+      return existing[0];
+    }
     const current = await transaction.select({ id: projectChannels.id }).from(projectChannels).where(and(eq(projectChannels.projectId, project.id), ne(projectChannels.status, "revoked"))).limit(MAX_PROJECT_CHANNELS);
     if (current.length >= MAX_PROJECT_CHANNELS) throw new Error("O projeto já possui o limite de cinco canais");
     const inserted = await transaction.insert(projectChannels).values({ projectId: project.id, channelId: input.channelId, channelName: input.channelName.slice(0, 255), status: "pending" }).returning({ id: projectChannels.id });
@@ -362,7 +366,7 @@ export async function getProjectChannelStatuses(ownerOpenId: string) {
   }).from(projectChannels)
     .innerJoin(projectMembers, eq(projectMembers.projectId, projectChannels.projectId))
     .innerJoin(projects, eq(projects.id, projectChannels.projectId))
-    .leftJoin(youtubeConnections, and(eq(youtubeConnections.projectChannelId, projectChannels.id), eq(youtubeConnections.ownerOpenId, ownerOpenId)))
+    .leftJoin(youtubeConnections, eq(youtubeConnections.projectChannelId, projectChannels.id))
     .where(and(eq(projectMembers.openId, ownerOpenId), eq(projectMembers.status, "active"), eq(projects.status, "active")));
   return rows.map(row => ({
     status: ["paused", "revoked"].includes(row.channel.status) ? row.channel.status : row.connection?.status ?? row.channel.status,
@@ -382,7 +386,7 @@ export async function getYouTubeConnection(ownerOpenId: string, projectChannelId
   if (!db) return undefined;
   const filters = projectChannelId === undefined
     ? eq(youtubeConnections.ownerOpenId, ownerOpenId)
-    : and(eq(youtubeConnections.ownerOpenId, ownerOpenId), eq(youtubeConnections.projectChannelId, projectChannelId));
+    : eq(youtubeConnections.projectChannelId, projectChannelId);
   const result = await db.select().from(youtubeConnections).where(filters).limit(2);
   if (projectChannelId === undefined && result.length > 1) throw new Error("É necessário informar o canal quando há múltiplas conexões");
   return result[0];
@@ -424,7 +428,7 @@ export async function markYouTubeReauthorizationRequired(ownerOpenId: string, re
   const database = requireDatabase(await getDb());
   const filter = projectChannelId === undefined
     ? eq(youtubeConnections.ownerOpenId, ownerOpenId)
-    : and(eq(youtubeConnections.ownerOpenId, ownerOpenId), eq(youtubeConnections.projectChannelId, projectChannelId));
+    : eq(youtubeConnections.projectChannelId, projectChannelId);
   await database.update(youtubeConnections).set({ status: "reauthorization_required", lastError: reason.slice(0, 500), updatedAt: new Date() }).where(filter);
 }
 
@@ -443,7 +447,7 @@ export async function upsertYouTubeConnection(input: {
   const db = requireDatabase(await getDb());
   const filter = input.projectChannelId == null
     ? eq(youtubeConnections.ownerOpenId, input.ownerOpenId)
-    : and(eq(youtubeConnections.ownerOpenId, input.ownerOpenId), eq(youtubeConnections.projectChannelId, input.projectChannelId));
+    : eq(youtubeConnections.projectChannelId, input.projectChannelId);
   const existing = await db.select({ id: youtubeConnections.id }).from(youtubeConnections).where(filter).limit(1);
   const values = { ...input, projectChannelId: input.projectChannelId ?? null };
   if (existing[0]) {
@@ -520,9 +524,10 @@ function isLikelyChannelCta(text: string | null | undefined) {
   return hashtagCount >= 3 || channelCtaSignals.some(signal => normalized.includes(signal.normalize("NFD").replace(/[\u0300-\u036f]/g, "")));
 }
 
-export async function regenerateHumanizedDrafts(ownerId: number, limit = 25, projectChannelId?: number) {
+export async function regenerateHumanizedDrafts(ownerOpenId: string, ownerId: number, limit = 25, projectChannelId?: number) {
   const database = requireDatabase(await getDb());
-  const editorialContext = await getEditorialContext(String(ownerId));
+  if (projectChannelId !== undefined && !(await getProjectChannelForOwner(ownerOpenId, projectChannelId))) throw new Error("Canal do projeto não encontrado ou sem acesso");
+  const editorialContext = await getEditorialContext(ownerOpenId);
   const rows = await database.select({ draft: drafts, video: videos }).from(drafts).innerJoin(videos, eq(drafts.videoId, videos.id)).where(and(eq(drafts.createdBy, ownerId), projectChannelId === undefined ? isNull(drafts.projectChannelId) : eq(drafts.projectChannelId, projectChannelId), eq(drafts.status, "review"))).orderBy(desc(drafts.createdAt)).limit(Math.min(25, Math.max(1, limit)));
   let regenerated = 0;
   let skipped = 0;
@@ -549,7 +554,7 @@ export async function regenerateHumanizedDrafts(ownerId: number, limit = 25, pro
 }
 
 async function ensureDraftForVideo(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, videoId: number, input: { title?: string; channelName?: string }, ownerId: number, projectChannelId?: number) {
-  const existingDraft = await db.select({ id: drafts.id }).from(drafts).where(and(eq(drafts.videoId, videoId), eq(drafts.createdBy, ownerId))).limit(1);
+  const existingDraft = await db.select({ id: drafts.id }).from(drafts).where(and(eq(drafts.videoId, videoId), eq(drafts.createdBy, ownerId), projectChannelId === undefined ? isNull(drafts.projectChannelId) : eq(drafts.projectChannelId, projectChannelId))).limit(1);
   if (existingDraft.length > 0) return;
 
   const title = input.title ?? "o vídeo importado";

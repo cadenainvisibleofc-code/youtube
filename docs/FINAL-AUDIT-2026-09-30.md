@@ -88,3 +88,13 @@ A autorização é do projeto/canal, mas buscas de conexão usam `ownerOpenId`. 
 - Não usar o SQL histórico em `docs/legacy-migrations/` como migration ativa.
 - Não reatribuir drafts/outbox para outro canal para “fazer funcionar”.
 - Não apagar histórico para corrigir inconsistência; usar quarentena, backfill auditável e `RESTRICT`.
+
+## Rodada multicanal de continuidade — 2026-10-01
+
+- O callback não reativa mais silenciosamente um slot `paused` ou `revoked`; esses estados são recusados no fluxo de reconexão/adicionar conta.
+- Conexões vinculadas a `projectChannelId` passaram a ser custodiadas pelo slot do projeto, não pelo `ownerOpenId` do ator. Isso permite que owner/editor autorizados operem o mesmo canal sem criar conflito de unicidade ou parecer que o canal está desconectado.
+- A ingestão manual de um mesmo vídeo agora deduplica por usuário e `projectChannelId`; canais diferentes podem manter drafts independentes.
+- A regeneração de drafts valida o `projectChannelId` contra o membro owner/editor antes de consultar ou alterar dados.
+- Foi criado o guia sanitizado `docs/GUIA-CONEXAO-5-CANAIS-YOUTUBE-v1.md`.
+
+Os riscos de constraint matemática do teto de cinco, correspondência composta entre FKs, backfill ambíguo e exactly-once externo continuam abertos e não foram mascarados por esta rodada.

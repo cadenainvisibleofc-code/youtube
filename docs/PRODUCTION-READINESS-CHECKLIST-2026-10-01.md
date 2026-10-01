@@ -19,9 +19,11 @@
 - [x] Chave RelayModels cadastrada no cofre de produção; o valor inválido `gpt-4o-mini` foi substituído por `gpt-5.6-sol` após o erro `model_not_found`.
 - [x] Fallback do código atualizado para `gpt-5.6-sol`, modelo recomendado pelo RelayModels para agentes com ferramentas.
 - [x] Fallback defensivo adicionado: valores `sk-...` em `EXTERNAL_LLM_MODEL` nunca são enviados ao RelayModels como modelo.
+- [x] Auditoria multicanal continuada: custódia de conexão por `projectChannelId`, bloqueio de reativação de canais pausados/revogados, deduplicação de drafts por canal e validação de canal na regeneração.
+- [x] Guia sanitizado de até cinco canais criado em `docs/GUIA-CONEXAO-5-CANAIS-YOUTUBE-v1.md`.
 - [x] Runtime publicado após a configuração RelayModels e healthcheck confirmado com `200`.
 - [ ] Teste funcional do chat autenticado com uma mensagem e uma ação de baixo risco.
-- [ ] `pnpm portability:check` local em `ready` — o checkout não recebe secrets protegidos; a identidade pós-login ainda falta.
+- [ ] `pnpm portability:check` local em `ready` — o comando foi executado e permanece em `needs-attention` somente porque `OWNER_OPEN_ID` depende do primeiro login; nenhum secret foi impresso.
 - [x] Secrets de produção do YouTube OAuth cadastrados no cofre WebDev: Client ID, Client Secret, callback HTTPS e chave de cifragem.
 - [ ] Rotação da senha do Supabase — adiada por decisão do usuário.
 
