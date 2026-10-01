@@ -14,16 +14,16 @@ A estrutura verificada no Supabase contém **23 tabelas, 25 enums, 23 FKs, 19 í
 
 ## Cofre e runtime
 
-O secret seguro `SUPABASE_DATABASE_URL` foi cadastrado no cofre do projeto WebDev e sincronizado. O runtime agora prefere `SUPABASE_DATABASE_URL` e mantém fallback compatível para `DATABASE_URL`. A senha nunca foi exposta no chat, arquivo ou comando.
+O secret seguro `SUPABASE_DATABASE_URL` foi cadastrado no cofre do projeto WebDev e sincronizado. A URI usa o Session Pooler IPv4 do Supabase, com caracteres especiais da senha percent-encoded. O runtime prefere `SUPABASE_DATABASE_URL` e mantém fallback compatível para `DATABASE_URL`. A senha não foi gravada em arquivo ou comando.
 
-O shell local mascara secrets protegidos como `*****REDACTED*****`. Por isso, `pnpm db:audit` executado diretamente neste terminal não consegue usar a URI real e falha antes da conexão, sem tocar no banco. O servidor de preview foi iniciado e o healthcheck respondeu normalmente, mas o smoke test tRPC de escrita retornou `Invalid URL` porque o processo recebeu o placeholder mascarado, não a URI real. A estrutura e o estado vazio foram validados diretamente pelo MCP do Supabase em modo read-only.
+O shell local mascara secrets protegidos como `*****REDACTED*****`, portanto o auditor local não pode consumir a URI real. No entanto, o runtime publicado `https://cadenaiv-tqbkbmxw.manus.space` foi validado end-to-end: `/api/health` respondeu `200`, a operação tRPC `analytics.recordReadingVisit` inseriu uma linha no Supabase e a leitura direta confirmou os valores. Um segundo ciclo com o mesmo token confirmou `onConflictDoUpdate`, alterando `source`, `campaign`, `videoReference`, `secondsRead` e `completed`. Os dois registros temporários foram removidos; a verificação final retornou zero registros de smoke test.
 
 ## Gates locais
 
 `pnpm check`, `pnpm build`, `node --check scripts/audit-database.mjs` e `node --check scripts/backfill-project.mjs` passaram. A busca por referências MySQL executáveis não encontrou uso de `mysql2`, `mysql-core`, `mysqlTable`, `mysqlEnum`, `insertId` ou `affectedRows` no runtime/schema/scripts.
 
-`pnpm portability:check` continua como `needs-attention` por secrets de produção independentes do Supabase: OAuth do YouTube, identidade pós-login e URI de callback ainda não configurados neste ambiente. Isso não invalida o schema Supabase, mas o teste end-to-end com a URI real exige um runtime gerenciado que não mascare o secret, normalmente um container publicado.
+`pnpm portability:check` continua como `needs-attention` por secrets de produção independentes do Supabase: OAuth do YouTube, identidade pós-login e URI de callback ainda não configurados neste ambiente. Isso não invalida a conexão Supabase. A validação confirmou o schema completo, RLS nas 23 tabelas, contagens sem dados de negócio e as operações de inserção/upsert exercitáveis sem autenticação. As rotas protegidas e CRUD de entidades editoriais continuam aguardando uma identidade de usuário e dados de teste deliberadamente preparados; não foram inventados registros reais.
 
 ## Próxima fase
 
-O banco está pronto para conexão server-side. O próximo passo operacional é executar o servidor WebDev no runtime gerenciado, que recebe o secret real, e verificar o healthcheck e uma operação read-only da aplicação. Depois disso, se desejado, o backfill de projeto/usuário deve ser feito separadamente, com `ALLOW_PROJECT_BACKFILL=1`, identidade confirmada e uma decisão explícita sobre quais dados históricos serão migrados. Nenhuma migração de dados foi feita; o Supabase permanece vazio.
+O banco está pronto para conexão server-side e a conexão real foi comprovada. O próximo passo, se desejado, é configurar os secrets OAuth/identidade e fazer um backfill separado de projeto/usuário, com `ALLOW_PROJECT_BACKFILL=1`, identidade confirmada e uma decisão explícita sobre quais dados históricos serão migrados. Nenhuma migração de dados foi feita; o Supabase permanece vazio.
