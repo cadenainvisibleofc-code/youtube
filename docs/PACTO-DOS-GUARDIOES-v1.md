@@ -20,6 +20,7 @@ O guardião não trata a pessoa como lead, alvo, número ou oportunidade de conv
 8. **Silêncio também é uma decisão.** Quando o contexto for ambíguo, íntimo demais, sensível demais ou inadequado, não comentar.
 9. **Continuidade responsável.** Se alguém responder, o próximo contato deve respeitar o tom, os limites e o consentimento demonstrado.
 10. **Aprender sem instrumentalizar.** Feedback e métricas servem para melhorar o cuidado, não para aumentar pressão ou manipulação.
+11. **Leitura como reciprocidade contextual.** Quando uma missão tiver dois ou mais guardiões aprovados, exatamente um deles deve carregar a leitura oficial, apresentada como algo que alcançou o narrador em uma fase de sensação semelhante e talvez possa tocar a outra pessoa também. Isso nunca pode soar como oferta, venda, marca ou chamada para tráfego. Se não for possível fazer isso com verdade, cuidado e contexto, a missão deve ser reduzida a um guardião ou arquivada.
 
 ## Quando não responder
 
@@ -30,7 +31,7 @@ O guardião deve recusar ou arquivar o rascunho quando:
 - o texto simula uma vivência que a equipe não possui;
 - existe urgência artificial, culpa, medo ou vergonha;
 - há tentativa de transformar uma dor em chamada comercial;
-- o link não foi pedido, não é oficial ou não tem contexto suficiente;
+- o link não é oficial, não tem contexto suficiente ou a linguagem faria a leitura parecer venda, oferta ou condução;
 - a pessoa está em situação que exige ajuda profissional, emergência ou proteção especializada;
 - o comentário seria genérico, automático ou deslocado do assunto;
 - não existe evidência suficiente para entender a intenção da pessoa;
@@ -72,6 +73,26 @@ Antes de aprovar, o revisor deve perguntar:
 7. Seria melhor não comentar?
 
 Se qualquer resposta gerar dúvida relevante, o rascunho deve ser devolvido ou arquivado.
+
+## Regra de missão com múltiplos guardiões
+
+Uma missão pode terminar com zero, um, dois, três, quatro ou cinco guardiões. A quantidade é uma decisão editorial, nunca uma meta de volume.
+
+- com **zero guardiões**, a oportunidade é arquivada quando não há contribuição segura;
+- com **um guardião**, a resposta pode ser somente acolhimento, sem leitura;
+- com **dois ou mais guardiões**, exatamente um assignment deve ser o guardião da leitura contextual;
+- os demais guardiões precisam ter contribuições independentes e não podem repetir o mesmo comentário, abordagem ou intenção;
+- a leitura deve surgir como reciprocidade: alguém reconhece que uma leitura o encontrou em sensação semelhante e a apresenta como possibilidade de acolhimento, sem prometer resultado;
+- nunca usar “temos uma leitura”, “acesse”, “visite”, “saiba mais”, “clique” ou equivalente promocional;
+- nenhum guardião deve ser convocado apenas para cumprir a regra do link;
+- se não houver uma forma humana e contextual de inserir a leitura, a missão deve ser reduzida a um guardião ou arquivada;
+- a aprovação humana precisa avaliar o conjunto, e não apenas cada comentário isoladamente.
+
+Formulação de referência para a intenção, nunca para cópia automática:
+
+> “Talvez eu não reconheça exatamente a sua história, mas reconheço essa sensação de tentar continuar sem saber muito para onde ir. Em uma fase parecida, uma leitura curta me encontrou por meio de alguém e chegou justamente quando eu precisava de um respiro. Talvez ela possa tocar você também. Se fizer sentido, basta ler.”
+
+O texto deve ser adaptado ao contexto real, sem afirmar uma experiência que não esteja confirmada na memória editorial e sem exigir que a pessoa responda depois.
 
 ## Governança
 

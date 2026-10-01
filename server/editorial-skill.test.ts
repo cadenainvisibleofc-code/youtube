@@ -7,6 +7,9 @@ describe("Cadena editorial skill", () => {
     expect(CADENA_EDITORIAL_SKILL).toContain("FLUXO OBRIGATÓRIO ANTES DE ESCREVER");
     expect(CADENA_EDITORIAL_SKILL).toContain("Qual detalhe específico");
     expect(CADENA_EDITORIAL_SKILL).toContain("não invente detalhes");
+    expect(CADENA_EDITORIAL_SKILL).toContain("exatamente um assignment");
+    expect(CADENA_EDITORIAL_SKILL).toContain("reciprocidade");
+    expect(CADENA_EDITORIAL_SKILL).toContain("Nunca usar “temos uma leitura”");
   });
 
   it("appends only the supplied editorial memory to the skill context", () => {

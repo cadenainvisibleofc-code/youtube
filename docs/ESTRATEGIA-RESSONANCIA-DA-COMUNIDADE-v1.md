@@ -241,9 +241,23 @@ O link só pode aparecer quando:
 - o canal tem legitimidade para oferecer o recurso;
 - houve aprovação humana.
 
+### Regra de missão com guardiões
+
+Uma missão pode terminar com zero, um, dois, três, quatro ou cinco guardiões.
+
+- zero ou um guardião podem atuar sem link;
+- quando houver dois ou mais guardiões aprovados, **exatamente um** deve carregar a leitura contextual;
+- os demais devem ter contribuições independentes, sem repetição semântica;
+- a leitura deve ser apresentada como uma experiência de reciprocidade, em que uma leitura encontrou o narrador em sensação semelhante e talvez possa tocar a outra pessoa;
+- não usar linguagem de marca ou conversão, como “temos uma leitura”, “acesse”, “visite”, “saiba mais” ou “clique”;
+- se a leitura não puder ser inserida com empatia, contexto e verdade, a missão deve ser reduzida a um guardião ou arquivada;
+- o fato de existir um segundo guardião nunca autoriza publicação automática nem dispensa revisão humana.
+
 A regra prática é:
 
 > Primeiro ajudar a conversa. Depois, se for realmente adequado, oferecer um recurso. Nunca usar a conversa apenas como corredor para o link.
+
+Em missões com múltiplos guardiões, “oferecer um recurso” significa uma única participação de leitura contextual, não uma chamada promocional. O texto deve continuar completo e acolhedor se o link for removido.
 
 ---
 
