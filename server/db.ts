@@ -403,11 +403,17 @@ export async function recordReadingVisit(input: { visitToken: string; source?: s
     await database.insert(readingVisits).values(values).onConflictDoUpdate({ target: readingVisits.visitToken, set: { source: values.source, campaign: values.campaign, videoReference: values.videoReference, secondsRead: values.secondsRead, completed: values.completed, updatedAt: values.updatedAt } });
   } catch (error) {
     const cause = error instanceof Error && error.cause instanceof Error ? error.cause : error;
-    console.error("[Database] readingVisits write failed", {
-      code: typeof cause === "object" && cause && "code" in cause ? cause.code : undefined,
-      message: cause instanceof Error ? cause.message : String(cause),
-    });
-    throw error;
+    let session = "unknown";
+    try {
+      const result = await database.execute(sql`select current_user as role, current_schema() as schema`);
+      const row = result.rows[0] as { role?: string; schema?: string } | undefined;
+      session = `${row?.role ?? "unknown"}/${row?.schema ?? "unknown"}`;
+    } catch {
+      // Keep the original database failure if diagnostics cannot query session metadata.
+    }
+    const code = typeof cause === "object" && cause && "code" in cause ? String(cause.code) : "unknown";
+    const message = cause instanceof Error ? cause.message : String(cause);
+    throw new Error(`readingVisits diagnostic: session=${session}; code=${code}; message=${message}`);
   }
   return { persisted: true };
 }
