@@ -16,12 +16,13 @@
 - [x] `pnpm test` aprovado: 124 testes passaram, 1 foi pulado por ausência de credenciais reais.
 - [x] `pnpm build` aprovado.
 - [x] Aprovação humana permanece obrigatória; o agente não expõe mais a opção de autopublicação.
-- [ ] `pnpm portability:check` em `ready` — depende dos secrets OAuth e da identidade pós-login.
+- [ ] `pnpm portability:check` local em `ready` — o checkout não recebe secrets protegidos; a identidade pós-login ainda falta.
+- [x] Secrets de produção do YouTube OAuth cadastrados no cofre WebDev: Client ID, Client Secret, callback HTTPS e chave de cifragem.
 - [ ] Rotação da senha do Supabase — adiada por decisão do usuário.
 
-## O que trazer do Google Cloud Console
+## O que foi trazido do Google Cloud Console
 
-Não envie Client Secret, tokens ou chaves em mensagem. Depois de obter os valores, eles devem ser inseridos no cartão seguro do cofre WebDev.
+Não envie Client Secret, tokens ou chaves em mensagem. Os valores foram inseridos no cartão seguro do cofre WebDev e não foram gravados no código.
 
 ### 1. Projeto e API
 
@@ -55,38 +56,36 @@ Não cadastrar:
 - URL com query string ou fragmento;
 - caminho diferente de `/api/youtube/oauth/callback`.
 
-Trazer para o cofre seguro:
+Registrado no cofre seguro:
 
 - `YOUTUBE_OAUTH_CLIENT_ID`
 - `YOUTUBE_OAUTH_CLIENT_SECRET`
 
-## Valores que ainda precisam ser configurados no cofre
+## Valores que foram configurados no cofre
 
-Além dos dois valores do Google Console, o runtime precisa de:
+Além dos dois valores do Google Console, o runtime recebeu:
 
 - `YOUTUBE_OAUTH_REDIRECT_URI` = callback HTTPS exato acima;
 - `YOUTUBE_TOKEN_ENCRYPTION_KEY` = chave Base64 que decodifica exatamente para 32 bytes.
 
 A chave de cifragem não deve ser gerada novamente se já houver tokens YouTube que precisem ser preservados. Se não houver tokens existentes, uma nova chave pode ser criada uma única vez e guardada no cofre.
 
-Também falta, após o primeiro login Manus:
+Ainda falta, após o primeiro login Manus:
 
-- `OWNER_OPEN_ID` = identidade exata do proprietário retornada após o login.
+- `OWNER_OPEN_ID` = identidade exata do proprietário retornada após o login; não deve ser inventado nem enviado como segredo.
 
 ## Testes após receber os valores
 
-1. Sincronizar secrets no runtime sem imprimir valores.
-2. Executar `pnpm portability:check` e confirmar `ready`.
-3. Publicar a versão com configuração OAuth.
-4. Testar login Manus.
-5. Testar início do OAuth YouTube.
-6. Confirmar tela de consentimento Google.
-7. Confirmar retorno pelo callback HTTPS.
-8. Confirmar listagem de canais.
-9. Confirmar seleção explícita de canal quando houver mais de um.
-10. Confirmar token cifrado no banco.
-11. Confirmar que a publicação cria rascunho/outbox somente após aprovação humana.
-12. Confirmar que nenhum caminho publica externamente sem aprovação.
+1. Secrets já sincronizados no runtime sem imprimir valores.
+2. Fazer login Manus no painel publicado.
+3. Testar início do OAuth YouTube.
+4. Confirmar tela de consentimento Google.
+5. Confirmar retorno pelo callback HTTPS.
+6. Confirmar listagem de canais.
+7. Confirmar seleção explícita de canal quando houver mais de um.
+8. Confirmar token cifrado no banco.
+9. Confirmar que a publicação cria rascunho/outbox somente após aprovação humana.
+10. Confirmar que nenhum caminho publica externamente sem aprovação.
 
 ## Critérios para liberar piloto
 
