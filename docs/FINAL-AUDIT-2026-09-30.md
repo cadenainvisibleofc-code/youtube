@@ -2,7 +2,7 @@
 
 ## Resultado executivo
 
-**Commit de referência do código publicado:** `9eb109cb01e6a6610fa1a08707893249ce3dbd0e`
+**Commit de referência do código publicado:** `626fec8f504da49cf8b4fa02a834a998117ad345`
 
 O checkout atual foi auditado por três revisões independentes: fluxo UI/OAuth, integridade de schema/migrations/outbox e completude do pacote de recuperação. A suíte atual passa com **125 testes**, `pnpm check`, `pnpm build` e `pnpm portability:check`.
 
@@ -75,7 +75,7 @@ A autorização é do projeto/canal, mas buscas de conexão usam `ownerOpenId`. 
 - `pnpm test`: 23 arquivos, 125 testes aprovados.
 - `pnpm check`: aprovado.
 - `pnpm build`: aprovado; há apenas aviso existente sobre script de configuração sem `type=module` e tamanho de chunk.
-- `pnpm portability:check`: `ready`; `OWNER_OPEN_ID` permanece `pending-login` até o primeiro login/backfill.
+- `pnpm portability:check`: executado; permanece em `needs-attention` porque `OWNER_OPEN_ID` depende do primeiro login.
 - Auditoria de literals de secrets: nenhum valor encontrado no código/documentação versionada.
 - `git diff --check`: aprovado.
 - Endpoints publicados verificados: `/api/health` e `/manus-routes.json`.
@@ -98,3 +98,14 @@ A autorização é do projeto/canal, mas buscas de conexão usam `ownerOpenId`. 
 - Foi criado o guia sanitizado `docs/GUIA-CONEXAO-5-CANAIS-YOUTUBE-v1.md`.
 
 Os riscos de constraint matemática do teto de cinco, correspondência composta entre FKs, backfill ambíguo e exactly-once externo continuam abertos e não foram mascarados por esta rodada.
+
+## Auditoria somente leitura do Supabase — 2026-10-01
+
+- Projeto confirmado: `PROJETO CADENA YOUTUBE`, ref `thliiwlagdmnqjwzmiyt`, região `sa-east-1`, estado `ACTIVE_HEALTHY`, PostgreSQL 17.
+- Cinco migrations estão registradas: schema/types, tabelas restantes, constraints/índices, limpeza de índice duplicado e RLS server-side.
+- As 23 tabelas públicas estão com RLS habilitado e sem políticas; isso mantém o acesso via servidor, conforme decisão do projeto.
+- As colunas `projectChannelId` existem nas cinco entidades críticas auditadas.
+- Contagens operacionais: projetos 0, membros 0, canais 0, drafts 0, outbox 0 e publicações 0.
+- Há uma conexão YouTube legada com `projectChannelId = NULL`; access token e refresh token estão preenchidos como valores cifrados. Não há órfão referencial, e nenhum dado foi removido ou alterado.
+- A reconciliação desse registro deve ocorrer somente após login e confirmação explícita de projeto/canal; não executar backfill inferencial.
+- Advisor de segurança sinaliza corretamente as 23 tabelas com RLS sem políticas; advisor de performance sinaliza FKs sem índice de cobertura. Esses avisos não foram alterados nesta auditoria somente leitura.

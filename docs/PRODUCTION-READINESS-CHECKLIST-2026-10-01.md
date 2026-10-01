@@ -22,6 +22,11 @@
 - [x] Auditoria multicanal continuada: custódia de conexão por `projectChannelId`, bloqueio de reativação de canais pausados/revogados, deduplicação de drafts por canal e validação de canal na regeneração.
 - [x] Guia sanitizado de até cinco canais criado em `docs/GUIA-CONEXAO-5-CANAIS-YOUTUBE-v1.md`.
 - [x] Runtime publicado após a configuração RelayModels e healthcheck confirmado com `200`.
+- [x] Auditoria somente leitura do Supabase `PROJETO CADENA YOUTUBE`: projeto ativo/saudável, PostgreSQL 17, cinco migrations registradas, 23 tabelas com RLS e zero políticas públicas.
+- [x] Escopo `projectChannelId` confirmado em `automationSettings`, `drafts`, `publicationOutbox`, `publications` e `youtubeConnections`.
+- [x] Nenhum projeto, membro, canal, draft, outbox ou publicação operacional ainda foi criado; não foi feito backfill nem escrita durante esta auditoria.
+- [x] Uma conexão YouTube legada sem `projectChannelId` foi identificada; seus campos de tokens estão preenchidos e cifrados. Ela foi preservada para reconciliação controlada após o login, sem inferir projeto ou canal.
+- [ ] Reconciliar a conexão YouTube legada somente após confirmar a identidade, o projeto e o `channelId` no fluxo autenticado.
 - [ ] Teste funcional do chat autenticado com uma mensagem e uma ação de baixo risco.
 - [ ] `pnpm portability:check` local em `ready` — o comando foi executado e permanece em `needs-attention` somente porque `OWNER_OPEN_ID` depende do primeiro login; nenhum secret foi impresso.
 - [x] Secrets de produção do YouTube OAuth cadastrados no cofre WebDev: Client ID, Client Secret, callback HTTPS e chave de cifragem.

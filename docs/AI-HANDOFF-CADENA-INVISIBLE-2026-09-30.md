@@ -1,9 +1,9 @@
 # Cadena Invisible — Handoff completo para outra IA
 
 **Estado:** snapshot sanitizado e auditado em 2026-09-30
-**Commit de referência do código publicado:** `9eb109cb01e6a6610fa1a08707893249ce3dbd0e`
-**Produção:** https://cadenainv-3aa2uun3.manus.space
-**Stack:** React 19, TypeScript, Vite, Tailwind 4, Express 4, tRPC 11, Drizzle ORM, MySQL/TiDB, Manus Auth, YouTube OAuth/Data API v3 e RelayModels opcional.
+**Commit de referência do código publicado:** `626fec8f504da49cf8b4fa02a834a998117ad345`
+**Produção:** https://cadenaiv-tqbkbmxw.manus.space
+**Stack:** React 19, TypeScript, Vite, Tailwind 4, Express 4, tRPC 11, Drizzle ORM, PostgreSQL 17/Supabase, Manus Auth, YouTube OAuth/Data API v3 e RelayModels opcional.
 
 > **Objetivo:** preservar uma aplicação editorial humana, empática e segura que descobre conversas públicas em espanhol, prepara rascunhos contextualizados e só publica depois de revisão humana.
 
@@ -13,7 +13,7 @@
 2. `README.md` é o índice curto.
 3. Este documento é o mapa operacional para outra IA.
 4. `docs/FINAL-AUDIT-2026-09-30.md` registra achados, correções e riscos residuais.
-5. `drizzle/0000_initial_users.sql` + `drizzle/0010...` até `drizzle/0017...` são a cadeia ativa; o SQL em `docs/legacy-migrations/` é histórico e não deve ser executado.
+5. `drizzle/0000_initial_users.sql` + `drizzle/0010...` até `drizzle/0017...` são a cadeia ativa do PostgreSQL/Supabase; o SQL em `docs/legacy-migrations/` é histórico e não deve ser executado.
 6. Secrets reais ficam apenas no cofre da plataforma. Este pacote nunca contém valores reais.
 
 ## 2. O que o produto faz
@@ -107,9 +107,9 @@ https://<DOMINIO_ATUAL>/api/youtube/oauth/callback
 
 ### Para mudar banco
 
-- Confirmar MySQL/TiDB e a linha de base real.
-- Verificar journal e schema aplicado.
-- Aplicar `0000` e `0001`–`0017` somente onde ainda não estiverem aplicadas.
+- Confirmar o projeto Supabase correto e a linha de base PostgreSQL real.
+- Verificar migrations registradas e schema aplicado.
+- Aplicar migrations PostgreSQL somente onde ainda não estiverem aplicadas.
 - Fazer relatório de linhas com `NULL projectChannelId`, órfãos, duplicatas e estados divergentes antes de tornar campos obrigatórios.
 
 ## 6. Secrets e arquivos proibidos no pacote
@@ -132,7 +132,8 @@ A publicação é manual e controlada. O código nunca deve habilitar auto-publi
 
 - Reconstrução do código sanitizado em projeto WebDev novo.
 - Migrations reconciliadas até `0017`.
-- Projetos, membros e canais adicionados.
+- Schema de projetos, membros e canais criado no Supabase; na auditoria de 2026-10-01 as tabelas operacionais ainda estavam vazias.
+- Uma conexão YouTube legada sem `projectChannelId` foi preservada para reconciliação autenticada; tokens foram confirmados como cifrados sem expor valores.
 - `projectChannelId` propagado por OAuth, drafts, automação, outbox e publicação.
 - State YouTube assinado com nonce/expiração.
 - Limite de cinco canais protegido por lock transacional no caminho normal.
