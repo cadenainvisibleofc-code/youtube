@@ -13,6 +13,7 @@
 4. Leia `SUPABASE-MIGRATION-MANIFEST-2026-10-01.md` antes de qualquer migration.
 5. Leia `PRODUCTION-READINESS-CHECKLIST-2026-10-01.md` antes de considerar produção pronta.
 6. Leia `PACTO-DOS-GUARDIOES-v1.md`, `METRICAS-DE-CUIDADO-E-COLABORACAO-v1.md` e `POLITICA-OPERACIONAL-E-CUIDADO-v2.md` antes de alterar regras editoriais.
+7. Regra vigente: zero ou um guardião podem atuar sem link; com dois ou mais, exatamente um deve carregar a leitura contextual, sem linguagem de oferta, venda ou condução.
 
 ## Como o sistema funciona hoje
 
