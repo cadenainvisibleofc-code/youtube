@@ -1,14 +1,16 @@
 # Inventário de portabilidade — Cadena Invisible
 
+> **Atualização 2026-10-01:** este inventário histórico foi reconciliado com o estado atual. A fonte operacional é o GitHub `cadenainvisibleofc-code/youtube` e o Supabase `PROJETO CADENA YOUTUBE`. Para backup, restauração e troca de conta, siga primeiro `docs/PLANO-CUSTODIA-E-RECUPERACAO-2026-10-01.md`.
+
 ## Baseline usado
 
 - Projeto: `cadena-invisible-panel-migrado`
 - Checkpoint atual de código: `1696126f`
-- Banco: MySQL/TiDB gerenciado pelo ambiente atual
-- Migration mais recente aplicada: `0012_hard_runaways`
+- Banco: PostgreSQL 17 no Supabase `thliiwlagdmnqjwzmiyt`
+- Migrations mais recentes aplicadas: `integrity_and_outbox_fencing`; hardening de `search_path` versionado para aplicação controlada
 - Publicação automática: desativada no MVP
 - OAuth do YouTube: callback no domínio publicado estável
-- Supabase: fora do escopo desta fase
+- Supabase: banco primário atual; schema, RLS e dados auditados
 
 ## Componentes que precisam viajar juntos
 
@@ -18,7 +20,7 @@
 - `docs/ACCOUNT-ROTATION-CHECKLIST.md`.
 - Contrato de nomes de secrets.
 - `YOUTUBE_TOKEN_ENCRYPTION_KEY`, preservada fora do código.
-- `DATABASE_URL`, preservada no cofre do ambiente correto.
+- `SUPABASE_DATABASE_URL`, preservada no cofre do ambiente correto.
 - Client ID, Client Secret e callback OAuth autorizados.
 
 ## Componentes que não devem ser transportados
@@ -59,11 +61,11 @@ Concluído sem trocar o banco principal:
 - nenhuma publicação foi executada.
 - a nova conta será validada como cópia de desenvolvimento antes de qualquer promoção;
 - a conta atual permanece como produção e rollback;
-- o pacote de transição não inclui Supabase nem alteração de banco.
+- o pacote de transição inclui o contrato do Supabase, o manifest de migrations e o plano de recuperação, mas nunca inclui valores de secrets ou dumps sem criptografia.
 
 Pendente para uma fase separada:
 
 - identidade permanente do projeto independente de `ownerOpenId`;
-- migração opcional para PostgreSQL/Supabase, fora do escopo atual;
+- backup externo e ensaio de restauração do PostgreSQL/Supabase;
 - hospedagem externa estável;
 - promoção de uma nova instância para produção.

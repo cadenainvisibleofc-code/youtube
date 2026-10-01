@@ -17,10 +17,12 @@ const postLoginEnv = [["OWNER_OPEN_ID"]];
 const optionalEnv = [["YOUTUBE_DATA_API_KEY"]];
 
 const requiredFiles = [
-  "drizzle/0000_initial_users.sql",
-  "drizzle/meta/0000_snapshot.json",
+  "drizzle/pg/0000_pg_initial.sql",
+  "drizzle/pg/0001_integrity_and_outbox_fencing.sql",
+  "docs/SUPABASE-MIGRATION-MANIFEST-2026-10-01.md",
+  "docs/PLANO-CUSTODIA-E-RECUPERACAO-2026-10-01.md",
+  "scripts/export-supabase-backup.sh",
   "drizzle/schema.ts",
-  "drizzle/0017_peaceful_cobalt_man.sql",
   "server/publication-outbox.ts",
   "server/youtube-oauth.ts",
   "docs/PORTABILITY-RUNBOOK.md",

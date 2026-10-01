@@ -21,10 +21,13 @@ Os documentos datados abaixo registram o ZIP original em MySQL/TiDB e suas decis
 - [Inventário de portabilidade](./docs/PORTABILITY-INVENTORY.md)
 - [Política de elegibilidade](./docs/ELIGIBILITY-POLICY-v2.md)
 - [Playbook de descoberta semanal](./docs/WEEKLY-DISCOVERY-PLAYBOOK.md)
+- [Plano de custódia e recuperação](./docs/PLANO-CUSTODIA-E-RECUPERACAO-2026-10-01.md)
+- [Manifest de migrations Supabase](./docs/SUPABASE-MIGRATION-MANIFEST-2026-10-01.md)
+- [Estratégia de ressonância da comunidade](./docs/ESTRATEGIA-RESSONANCIA-DA-COMUNIDADE-v1.md)
 
 ## Stack
 
-React 19, TypeScript, Vite, Tailwind 4, Express 4, tRPC 11, Drizzle ORM, PostgreSQL (`pg`, preparado para Supabase), Manus Auth e YouTube Data API v3. `SUPABASE_DATABASE_URL` deve apontar para o PostgreSQL do Supabase, com fallback compatível para `DATABASE_URL`; a conversão não transfere dados de negócio.
+React 19, TypeScript, Vite, Tailwind 4, Express 4, tRPC 11, Drizzle ORM, PostgreSQL 17/Supabase, Manus Auth e YouTube Data API v3. `SUPABASE_DATABASE_URL` é a fonte primária de conexão; `DATABASE_URL` permanece somente como fallback compatível para PostgreSQL.
 
 ## Desenvolvimento
 
@@ -49,7 +52,7 @@ pnpm dev
 
 ## Migrations
 
-O schema ativo está em `drizzle/schema.ts` e o Drizzle Kit está configurado para **gerar novas migrations PostgreSQL em `drizzle/pg/`**. A migration inicial `drizzle/pg/0000_pg_initial.sql` foi revisada e aplicada ao Supabase em etapas controladas; o banco está vazio e com RLS habilitado. O baseline `0000_initial_users.sql` até `0017_peaceful_cobalt_man.sql`, incluindo `drizzle/meta/`, é **histórico MySQL/TiDB do ZIP original**, não deve ser executado em PostgreSQL; o SQL em `docs/legacy-migrations/` também é histórico. Antes de qualquer `pnpm db:push`, revisar a migration incremental, permissões/RLS e plano de rollback.
+O schema ativo está em `drizzle/schema.ts` e as migrations PostgreSQL canônicas estão em `drizzle/pg/`. O Supabase já contém o schema, RLS server-side-only, integridade multicanal e fencing da outbox; a próxima migration é o hardening de `search_path`. O baseline `0000_initial_users.sql` até `0017_peaceful_cobalt_man.sql`, incluindo `drizzle/meta/`, é **histórico MySQL/TiDB do ZIP original** e não deve ser executado em PostgreSQL. Consulte o [manifest de migrations](./docs/SUPABASE-MIGRATION-MANIFEST-2026-10-01.md) antes de qualquer mudança.
 
 ## Regras operacionais
 
@@ -70,4 +73,4 @@ Nunca comite `.env`, `.project-config.json`, API keys, OAuth client secrets, tok
 
 ## Continuidade entre contas
 
-A conta atual permanece como produção e rollback. Uma segunda conta pode ser usada como desenvolvimento, mas a sincronização só ocorre por projeto compartilhado, repositório privado ou promoção controlada de um pacote sanitizado. Duas cópias independentes não se sincronizam sozinhas.
+A conta atual permanece como produção e rollback. O GitHub guarda o código e o Supabase guarda os dados; a Manus fornece execução, autenticação e deploy. A troca de conta exige restaurar os três contratos e revalidar secrets, OAuth e storage conforme o [plano de custódia e recuperação](./docs/PLANO-CUSTODIA-E-RECUPERACAO-2026-10-01.md).

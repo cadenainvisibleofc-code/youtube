@@ -1,13 +1,15 @@
 # Checklist de transição entre contas — Cadena Invisible
 
+> **Atualização 2026-10-01:** para o estado atual, siga primeiro `docs/PLANO-CUSTODIA-E-RECUPERACAO-2026-10-01.md`. Esta checklist contém referências históricas do ZIP e não deve ser interpretada como indicação de que o banco atual ainda é MySQL/TiDB.
+
 > **Checklist histórico do ZIP original MySQL/TiDB.** A afirmação de "banco atual" abaixo se refere ao ambiente de referência datado de 28/09/2026, não ao código agora convertido para PostgreSQL; nenhuma migration nem dados foram transferidos nesta conversão. Veja README antes de executar procedimentos de banco.
 
 **Data de referência:** 28/09/2026
 **Checkpoint de código:** `cb280bbe`
 **Projeto atual:** `cadena-invisible-panel-migrado`
-**Domínio de produção:** `https://cadenainv-3aa2uun3.manus.space`
-**Banco atual:** MySQL/TiDB gerenciado pelo WebDev
-**Supabase:** não faz parte desta fase
+**Domínio de produção:** `https://cadenaiv-tqbkbmxw.manus.space`
+**Banco atual:** PostgreSQL 17 no Supabase `PROJETO CADENA YOUTUBE`
+**Supabase:** banco primário atual; backups externos e manifest versionado são obrigatórios
 
 ## Objetivo
 
@@ -206,11 +208,12 @@ A fase futura deverá criar `projectId` e `projectMembers`, fazer backfill e man
 
 Nesta transição:
 
-- O banco continua MySQL/TiDB.
-- Nenhum schema PostgreSQL será criado.
-- Nenhum dado será migrado para Supabase.
-- Nenhuma URL de banco será trocada para PostgreSQL.
-- O plano de portabilidade permanece independente de Supabase.
+- O banco primário é PostgreSQL 17 no Supabase.
+- O schema e as migrations PostgreSQL estão versionados em `drizzle/pg/`.
+- O estado aplicado está registrado em `docs/SUPABASE-MIGRATION-MANIFEST-2026-10-01.md`.
+- A URI permanece somente no cofre como `SUPABASE_DATABASE_URL`.
+- Antes de qualquer migration, criar e verificar um dump externo conforme `scripts/export-supabase-backup.sh`.
+- O plano de portabilidade inclui GitHub, Supabase, secrets e storage; nenhum deles deve ser tratado como backup único.
 
 ## Organização recomendada no Drive
 

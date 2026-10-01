@@ -1,17 +1,19 @@
 # Cadena Invisible — Runbook de portabilidade
 
+> **Fonte atual:** o código está no GitHub `cadenainvisibleofc-code/youtube` e o banco primário está no Supabase `PROJETO CADENA YOUTUBE`. Este runbook preserva decisões históricas do ZIP; para executar backup, restauração ou troca de conta, siga `docs/PLANO-CUSTODIA-E-RECUPERACAO-2026-10-01.md`.
+
 > **Registro histórico do ZIP MySQL/TiDB (setembro de 2026).** As seções abaixo descrevem o ambiente original, não o código atualmente convertido para PostgreSQL. O driver e o schema atuais usam PostgreSQL; novas migrations devem ser geradas separadamente em `drizzle/pg/` e revisadas antes de qualquer aplicação. Nenhuma migration ou migração de dados foi executada nesta conversão. Consulte o README antes de operar o banco.
 
 ## Objetivo
 
 Permitir que o painel seja reconstruído em outra conta de desenvolvimento sem interromper dados, canais conectados, fila editorial ou histórico de engajamento.
 
-Para a transição atual, seguir primeiro `docs/ACCOUNT-ROTATION-CHECKLIST.md`. A conta nova será uma cópia de desenvolvimento validável, enquanto a conta atual continuará sendo produção e rollback. Supabase não faz parte desta fase.
+Para a transição atual, seguir primeiro `docs/PLANO-CUSTODIA-E-RECUPERACAO-2026-10-01.md` e depois `docs/ACCOUNT-ROTATION-CHECKLIST.md`. A conta nova será uma cópia de desenvolvimento validável, enquanto a conta atual continuará sendo produção e rollback. Supabase é o banco primário; nenhuma conta Manus deve ser sua única custódia.
 
 ## Arquitetura atual (baseline)
 
 - Aplicação: React + Express + tRPC + Drizzle.
-- Banco atual: MySQL/TiDB gerenciado pelo projeto WebDev.
+- Banco primário atual: PostgreSQL 17 no Supabase; referências MySQL/TiDB abaixo são históricas.
 - Identidade de acesso: sessão Manus; muitos registros ainda usam `ownerOpenId` como escopo.
 - OAuth do YouTube: callback estável no domínio publicado, nunca no host temporário do preview.
 - Publicação: somente após aprovação humana; `autoPublish` permanece bloqueado no MVP.
