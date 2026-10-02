@@ -16,7 +16,7 @@ import { parse as parseCookie } from "cookie";
 import { archiveChatConversation, createChatConversation, getChatHistory, listChatConversations, sendChatMessage } from "./chat-agent";
 import { listEditorialMemories, proposeEditorialMemory, reviewEditorialMemory } from "./editorial-memory";
 import { processPublicationOutbox, reconcilePublishedOutbox, requeueUncertainPublicationOutbox } from "./publication-outbox";
-import { approveGuardianMission, listGuardianMissions, prepareGuardianMission } from "./guardian-missions";
+import { approveGuardianMission, discoverAndPrepareGuardianMission, listGuardianMissions, prepareGuardianMission } from "./guardian-missions";
 
 export const appRouter = router({
   system: systemRouter,
@@ -41,6 +41,9 @@ export const appRouter = router({
         targetCommentIds: z.array(z.string().max(128).optional()).max(5).optional(),
       }))
       .mutation(({ ctx, input }) => prepareGuardianMission({ ...input, ownerOpenId: ctx.user.openId, ownerId: ctx.user.id })),
+    discoverAndPrepareGuardianMission: protectedProcedure
+      .input(z.object({ projectChannelIds: z.array(z.number().int().positive()).min(1).max(5), queries: z.array(z.string().min(2).max(120)).max(5).optional() }))
+      .mutation(({ ctx, input }) => discoverAndPrepareGuardianMission({ ...input, ownerOpenId: ctx.user.openId, ownerId: ctx.user.id })),
     approveGuardianMission: protectedProcedure
       .input(z.object({ missionId: z.number().int().positive() }))
       .mutation(({ ctx, input }) => approveGuardianMission(ctx.user.id, input.missionId)),

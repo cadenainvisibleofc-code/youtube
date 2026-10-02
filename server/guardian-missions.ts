@@ -1,10 +1,12 @@
-import { and, asc, eq, inArray } from "drizzle-orm";
-import { getDb, requireDatabase } from "./db";
+import { and, asc, eq } from "drizzle-orm";
+import { getDb, persistYouTubeCandidate, requireDatabase } from "./db";
 import { classifyRisk, canApproveDraft, validateFinalDraft } from "./editorial";
 import { generateEditorialDraft } from "./llm-editorial";
 import { getEditorialContext } from "./editorial-memory";
 import { ALLOWED_READING_URL } from "@shared/const";
 import { getProjectChannelsForOwner } from "./db";
+import { listTopComments, searchRecentVideos, type YouTubeCandidate } from "./youtube";
+import { rankSourceComments } from "./resonance";
 import {
   chainEvents,
   drafts,
@@ -13,8 +15,6 @@ import {
   editorialFeedback,
   publicationOutbox,
   projectChannels,
-  projects,
-  projectMembers,
   users,
   videos,
 } from "../drizzle/schema";
@@ -33,6 +33,70 @@ export type PrepareGuardianMissionInput = {
   resonanceScore?: number;
   targetCommentIds?: Array<string | undefined>;
 };
+
+export const AUTOMATIC_GUARDIAN_QUERIES = [
+  "me siento perdido en la vida",
+  "cómo seguir cuando no sabes qué hacer",
+  "sentirse solo aunque estés acompañado",
+  "vacío emocional y propósito",
+  "reconstruirse después de una etapa difícil",
+];
+
+export function rankMissionCandidates(candidates: YouTubeCandidate[]) {
+  return [...candidates]
+    .filter(candidate => candidate.language === "es" && candidate.eligibility.eligible && candidate.commentCount > 0 && !candidate.isShort)
+    .sort((left, right) => right.eligibility.opportunityScore - left.eligibility.opportunityScore || right.commentCount - left.commentCount || right.viewCount - left.viewCount);
+}
+
+export async function discoverAndPrepareGuardianMission(input: { ownerOpenId: string; ownerId: number; projectChannelIds: number[]; queries?: string[] }) {
+  const queries = (input.queries?.map(query => query.trim()).filter(query => query.length >= 2) ?? AUTOMATIC_GUARDIAN_QUERIES).slice(0, 5);
+  const candidatesById = new Map<string, YouTubeCandidate>();
+  let lastError: unknown;
+  for (const query of queries) {
+    try {
+      for (const candidate of await searchRecentVideos({ query, maxResults: 10 })) candidatesById.set(candidate.videoId, candidate);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  const rankedCandidates = rankMissionCandidates(Array.from(candidatesById.values()));
+  for (const candidate of rankedCandidates.slice(0, 15)) {
+    try {
+      const rankedComments = rankSourceComments(await listTopComments(candidate.videoId, 20));
+      const selected = rankedComments.find(item => item.resonance.riskLevel !== "high" && item.resonance.riskLevel !== "critical" && item.resonance.classification !== "noise");
+      if (!selected) continue;
+      const internalVideoId = await persistYouTubeCandidate({
+        videoId: candidate.videoId,
+        url: candidate.url,
+        title: candidate.title,
+        channelId: candidate.channelId,
+        channelName: candidate.channelName,
+        publishedAt: candidate.publishedAt,
+        durationSeconds: candidate.durationSeconds,
+        isShort: candidate.isShort,
+        viewCount: candidate.viewCount,
+        commentCount: candidate.commentCount,
+        language: candidate.language,
+        description: candidate.description,
+        eligibilityStatus: candidate.eligibility.status,
+        relevanceScore: candidate.eligibility.opportunityScore,
+        riskLevel: selected.resonance.riskLevel,
+      });
+      const mission = await prepareGuardianMission({
+        ...input,
+        videoId: internalVideoId,
+        sourceCommentId: selected.comment.commentId,
+        sourceCommentText: selected.comment.text,
+        resonanceScore: selected.resonance.score,
+      });
+      return { ...mission, discovery: { videoId: candidate.videoId, url: candidate.url, title: candidate.title, channelName: candidate.channelName, viewCount: candidate.viewCount, commentCount: candidate.commentCount, sourceCommentId: selected.comment.commentId, sourceCommentText: selected.comment.text, sourceCommentLikes: selected.comment.likeCount, sourceCommentReplies: selected.comment.replyCount, resonanceScore: selected.resonance.score, resonanceSignals: selected.resonance.signals, queries } };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  if (lastError instanceof Error && rankedCandidates.length === 0) throw lastError;
+  throw new Error("A busca automática não encontrou vídeo elegível com comentário-fonte seguro e significativo");
+}
 
 function normalizeChannelIds(ids: number[]) {
   return Array.from(new Set(ids)).filter(id => Number.isInteger(id) && id > 0);

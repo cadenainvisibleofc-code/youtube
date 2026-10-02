@@ -547,6 +547,53 @@ export async function ingestManualVideo(input: { url: string; title?: string; ch
   }
 }
 
+export async function persistYouTubeCandidate(input: {
+  videoId: string;
+  url: string;
+  title: string;
+  channelId: string;
+  channelName: string;
+  publishedAt: Date;
+  durationSeconds: number;
+  isShort: boolean;
+  viewCount: number;
+  commentCount: number;
+  language: string;
+  description: string;
+  eligibilityStatus: "discovered" | "eligible" | "rejected" | "blocked";
+  relevanceScore: number;
+  riskLevel: "low" | "medium" | "high" | "critical";
+}) {
+  const db = requireDatabase(await getDb());
+  const existing = (await db.select({ id: videos.id }).from(videos).where(eq(videos.youtubeVideoId, input.videoId)).limit(1))[0];
+  const values = {
+    youtubeVideoId: input.videoId,
+    url: input.url,
+    title: input.title,
+    channelId: input.channelId,
+    channelName: input.channelName,
+    publishedAt: input.publishedAt,
+    durationSeconds: input.durationSeconds,
+    isShort: input.isShort ? 1 : 0,
+    viewCount: input.viewCount,
+    commentCount: input.commentCount,
+    language: input.language,
+    description: input.description,
+    source: "youtube_api" as const,
+    eligibilityStatus: input.eligibilityStatus,
+    relevanceScore: input.relevanceScore,
+    riskLevel: input.riskLevel,
+    updatedAt: new Date(),
+  };
+  if (existing) {
+    await db.update(videos).set(values).where(eq(videos.id, existing.id));
+    return existing.id;
+  }
+  const inserted = await db.insert(videos).values(values).returning({ id: videos.id });
+  if (!inserted[0]) throw new DatabaseUnavailableError("Vídeo descoberto não pôde ser persistido");
+  return inserted[0].id;
+}
+
 const channelCtaSignals = ["link na bio", "link en bio", "acessa o link", "accede al enlace", "formação", "formacion", "inscreva-se", "suscríbete", "suscribete", "acompanhe mais", "sígueme", "sigueme", "meu canal", "mi canal", "youtube.com", "instagram.com"];
 
 function isLikelyChannelCta(text: string | null | undefined) {
